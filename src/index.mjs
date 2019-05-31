@@ -1,11 +1,12 @@
 import Bowser from 'bowser'
+import $ from 'jquery'
+const jQuery = $
+global.jQuery = $
 import 'jquery-ui'
 import 'blueimp-file-upload'
 import 'fabric'
-global.jQuery = require('jquery')
-require('bootstrap3')
+import 'bootstrap3'
 
-const $ = global.jQuery
 
 var screenWidth = $(window).width()
 var screenHeight = $(window).height()
@@ -1431,6 +1432,9 @@ $(document).ready(function () {
   $('#openGomiBox').click(function () {
     $('#disqus_thread').toggle()
   })
+  $('.btn-success:first').click((e)=>{
+    $('.bdsharebuttonbox').toggle()
+  });
 
   // page scroll
   var verticalFlag = false

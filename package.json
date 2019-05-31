@@ -12,8 +12,10 @@
   "devDependencies": {
     "@babel/cli": "^7.4.4",
     "@babel/core": "^7.4.5",
+    "@babel/preset-env": "^7.4.5",
     "babel-loader": "^8.0.6",
     "babel-plugin-transform-runtime": "^6.23.0",
+    "babel-plugin-transform-remove-strict-mode": "0.0.2",
     "babel-polyfill": "^6.26.0",
     "clean-webpack-plugin": "^3.0.0",
     "css-loader": "^2.1.1",
@@ -36,7 +38,7 @@
     "bootstrap3": "^3.3.5",
     "bowser": "^1.9.4",
     "fabric": "^1.6.3",
-    "jquery": "^2.1.1",
+    "jquery": "^3.1.1",
     "jquery-ui": "^1.12.1"
   }
 }

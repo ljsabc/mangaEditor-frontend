@@ -1,0 +1,13 @@
+{
+  "presets": [
+    ["@babel/preset-env", {
+      "loose": true,
+      "targets": {
+        "browsers": ["Last 3 versions"],
+      },
+      "modules": "amd",
+    }]
+  ],
+  "sourceType": "module",
+  "plugins": ["transform-remove-strict-mode"]
+}
