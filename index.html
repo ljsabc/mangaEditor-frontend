@@ -1,0 +1,209 @@
+<!doctype html>
+<html lang="zh-cn">
+
+<head>
+  <meta charset="UTF-8">
+  <title>MangaEditor 1.31b - 一个修改漫画的小工具</title>
+  <script src="js/mobile-detect.js"></script>
+  <script type="text/javascript">
+    var md = new MobileDetect(window.navigator.userAgent);
+    if (md.mobile()) {
+      location.href = "./mobile/"
+    }
+  </script>
+</head>
+
+<body>
+  <div id="wrapper" class="row" style="">
+    <div class="row" style="height:100%">
+      <div class="col-md-7" id="previewPanel">
+        <div id="previewWrapper">
+          <div class="darkroom-toolbar">
+            <ul class="darkroom-toolbar-actions">
+              <li class="darkroom-button-group"><button class="darkroom-button darkroom-button-default"
+                  data-balloon="保存" data-balloon-pos="up"><i class="darkroom-icon-save"></i></button><button
+                  class="darkroom-button darkroom-button-default" data-balloon="拖动创建一个新的空白区域" data-balloon-pos="up"><i
+                    class="darkroom-icon-add"></i></button><button
+                  class="darkroom-button darkroom-button-default disabled" id="canvasQuickEditor-Rotate"
+                  data-balloon="旋转文字方向" data-balloon-pos="up"><i class="darkroom-icon-rotate-left"></i></button><button
+                  class="darkroom-button darkroom-button-danger disabled" id="canvasQuickEditor-Delete"
+                  data-balloon="删除" data-balloon-pos="up"><i class="darkroom-icon-cancel"></i></button></li>
+              <li class="darkroom-button-group">
+              <li id='canvasQuickEditor-Font' class="canvasQuickEditor" style="display:none"><select>
+                  <option value='Noto Sans SC'>思源黑体简</option>
+                  <option value='Noto Sans TC'>思源黑体繁</option>
+                  <option value='Simhei'>黑体</option>
+                  <option value='Simsun'>宋体</option>
+                  <option value='幼圆'>幼圆</option>
+                  <option value='方正卡通简体'>方正卡通简体</option>
+                  <option value='方正正黑'>方正正黑</option>
+                  <option value='Microsoft Yahei'>微软雅黑</option>
+                  <option value='Hiragino Sans GB'>Hiragino Sans GB</option>
+                </select></li><button class="darkroom-button darkroom-button-default canvasQuickEditor"
+                id="canvasQuickEditor-Shrink" data-balloon="缩小" data-balloon-pos="up"><i
+                  class="darkroom-icon-back"></i></button><button class="darkroom-button
+                        darkroom-button-default canvasQuickEditor" id="canvasQuickEditor-Enlarge" data-balloon="放大"
+                data-balloon-pos="up"><i class="darkroom-icon-forward"></i></button><button
+                class="darkroom-button darkroom-button-default canvasQuickEditor" id="canvasQuickEditor-Bold"
+                data-balloon="粗体" data-balloon-pos="up"><i class="darkroom-icon-bold"></i></button></li>
+            </ul>
+          </div>
+          <div id="dropbox" class="dropzone">
+            <input id="fileupload" type="file" name="files"
+              accept="image/gif, image/png, image/jpeg, image/bmp, image/webp">
+            <div id="progress">
+              <div class="bar" style="width: 0%;"></div>
+            </div>
+          </div>
+          <div id="dropAd">
+            <script async src="//pagead2.googlesyndication.com/pagead/js/adsbygoogle.js"></script>
+            <!-- mangaeditor-LL -->
+            <ins class="adsbygoogle sqad" style="width: 100%; height:auto; display:block; margin: 0 auto;"
+              data-ad-client="ca-pub-2633684480410686" data-ad-slot="2637397436"
+              data-full-width-responsive="true"></ins>
+            <span>穷是这样的啊</span>
+          </div>
+          <canvas class="imageContainer" id="balloonChecker"></canvas>
+        </div>
+      </div>
+      <div class="col-md-5" id="editPanel">
+        <div class="row" id="toolbar">
+          <div class="col-lg-6">
+            <h2> 翻译菜单 </h2>
+          </div>
+          <div class="col-lg-6" style="padding:20px 20px 10px 0">
+            <span class="pull-right"><i class="fa fa-gear fa-2x"></i></span>
+          </div>
+        </div>
+        <div class="row" id="content">
+          <div class="col-lg-12">
+            <p style="line-height:1.65em">双击气泡区域即可抹白该区域，并开始修改该区域。点击保存图标即可自动保存。
+              <br />没有检测到的区域可以使用左上角的拖框工具手工拖框。
+              <br />双击生成的文字即可重新修改。</p>
+          </div>
+          <div class="col-lg-12" id="balloonCheckerTooltipList">
+            <div class='balloonListItem'>
+              <div class='listItemImageContainer'>
+                <img class='listItemImage'></img>
+              </div>
+              <div class='listItemOperaions'>
+                <h3 class='listItemOperaionsTitle'>测试OCR和翻译</h3>
+                <p>速度比较慢，请耐心等几秒。</p>
+                <div id="translations">
+                  <div class="input-group">
+                    <span class="input-group-addon">原文</span><input type="text" id="originalText" class="form-control"
+                      readonly="true" onClick="this.setSelectionRange(0, this.value.length)" />
+                    <div class="input-group-btn">
+                      <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown"
+                        aria-haspopup="true" aria-expanded="false" id="ocrLang">日语 <span class="caret"></span></button>
+                      <ul class="dropdown-menu dropdown-menu-right">
+                        <li><a href="javascript:setlang('ja')">日语</a></li>
+                        <li><a href="javascript:setlang('ko')">韩语</a></li>
+                        <li><a href="javascript:setlang('en')">英语</a></li>
+                        <li role="separator" class="divider"></li>
+                        <li><a href="javascript:setlang('unk')">检测语言</a></li>
+                      </ul>
+                    </div><!-- /btn-group -->
+                  </div>
+                  <br />
+                  <div class="input-group">
+                    <span class="input-group-addon">渣翻</span><input type="text" id="translatedText"
+                      class="form-control uneditable-input" readonly="true"
+                      onClick="this.setSelectionRange(0, this.value.length)" />
+                  </div>
+                </div>
+                <br />
+                <span id="testTranslation" class="btn btn-default btn-xs disabled">翻译当前气泡 </span>
+                <span id="translateAll" class="btn btn-default btn-xs disabled">提取所有文字 </span>
+                <div class="loader" id="translationIndicator" style="display:none">
+                  <div class="spinner-loader"></div> <span class="text-success">&nbsp; 正在处理... </span>
+                </div>
+                <div style="margin:5px 0 5px 0">
+                  <textArea id="translateAllResults" class="form-control" rows="10" style="display:none"></textarea>
+                </div>
+              </div>
+
+            </div>
+
+            <div class="balloonList" id="balloonEditorMainframeList">
+              <p>如果遇到任何问题或者想提供反馈，请发送到ljsabc@gmail.com。<br /> 请注意：<ol>
+                  <li>在上传之前请尽量保证图源，不要上传灰度太大的图，否则有可能会把服务器跑挂。服务器超时三分钟，如果三分钟还没有结果就不行了。</li>
+                  <li>另外请尽量不用使用某些批量工具，因为无法保证结果质量的同时，还会浪费服务器资源和一些钱。</li>
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div class="row">
+          <div class="col-lg-12">
+            <p style="font-size:12px;height:0.5em;"></p>
+            <!-- mangaEditor-Main -->
+            <ins class="adsbygoogle" style="display:block" data-ad-client="ca-pub-2633684480410686"
+              data-ad-slot="6809680421" data-ad-format="auto" data-full-width-responsive="true"></ins>
+            <p style="font-size:12px;height:0.5em;"></p>
+          </div>
+        </div>
+
+        <div class="row" id="actionbar">
+          <div class="col-lg-12">
+            <span id="jumpNext" class="btn btn-primary" onclick="javascript:window.location.reload();"><i
+                class="fa fa-gear"></i>刷新页面(开始下一张)</span>
+            <span class="btn btn-primary" style="display:none"><i class="fa fa-gear"></i> <a id="saveImg"
+                download="download.jpg">保存图片</a> </span>
+            <span class="btn btn-success" onclick="javascript:$('.bdsharebuttonbox').toggle()"><i
+                class="fa fa-share"></i>分享本站</span>
+            <a class="btn btn-warning" href="http://www.dashangcloud.com/sh/87a3ae" target="_blank">打赏本站</a>
+            <a href="v2" class="btn btn-default">新版编辑器(beta)</a>
+          </div>
+          <br />
+
+          <div class="col-lg-12">
+            <div class="bdsharebuttonbox" style="display:none"><a href="#" class="bds_more" data-cmd="more"></a><a
+                href="#" class="bds_tsina" data-cmd="tsina" title="分享到新浪微博"></a><a href="#" class="bds_qzone"
+                data-cmd="qzone" title="分享到QQ空间"></a><a href="#" class="bds_tqq" data-cmd="tqq" title="分享到腾讯微博"></a><a
+                href="#" class="bds_sqq" data-cmd="sqq" title="分享到QQ好友"></a><a href="#" class="bds_weixin"
+                data-cmd="weixin" title="分享到微信"></a><a href="#" class="bds_tieba" data-cmd="tieba"
+                title="分享到百度贴吧"></a><a href="#" class="bds_renren" data-cmd="renren" title="分享到人人网"></a><a href="#"
+                class="bds_twi" data-cmd="twi" title="分享到Twitter"></a><a href="#" class="bds_evernotecn"
+                data-cmd="evernotecn" title="分享到印象笔记"></a></div>
+            <script>
+              window._bd_share_config = {
+                "common": {
+                  "bdSnsKey": {},
+                  "bdText": "",
+                  "bdMini": "2",
+                  "bdMiniList": false,
+                  "bdPic": "",
+                  "bdStyle": "0",
+                  "bdSize": "24"
+                },
+                "share": {}
+              };
+              with(document) 0[(getElementsByTagName('head')[0] || body).appendChild(createElement(
+                'script')).src = 'bdshare/bdshare.min.js?cdnversion=' + ~(-new Date() / 36e5)];
+            </script>
+
+          </div>
+
+        </div>
+      </div>
+      <link rel="stylesheet" href="css/style.css">
+      <link rel="stylesheet" href="css/balloon.css">
+      <link rel="stylesheet" href="fonts/stylesheet.css">
+      <link rel="stylesheet" href="css/dropzone.css">
+      <link rel="stylesheet" href="css/bootstrap.min.css">
+      <script type="text/javascript" src="build/bundle.min.js"></script>
+      <script src="js/fabric.ext.js" type="text/javascript"></script>
+
+      <script async src="//pagead2.googlesyndication.com/pagead/js/adsbygoogle.js"></script>
+      <script type="text/javascript">
+        document.onreadystatechange = function () {
+          if (document.readyState == "interactive") {
+            // Initialize your application or run some code.
+            (adsbygoogle = window.adsbygoogle || []).push({});
+          }
+        }
+      </script>
+</body>
+
+</html>
