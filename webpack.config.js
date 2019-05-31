@@ -1,17 +1,25 @@
+const OptimizeCSSAssetsPlugin = require('optimize-css-assets-webpack-plugin')
 const path = require('path')
-const uglify = require('uglifyjs-webpack-plugin')
-//const CleanWebpackPlugin = require('clean-webpack-plugin')
+const glob = require('glob')
+const TerserPlugin = require('terser-webpack-plugin')
+const { CleanWebpackPlugin } = require('clean-webpack-plugin')
+const MiniCssExtractPlugin = require('mini-css-extract-plugin')
+
 module.exports = {
+  mode: 'production',
   // entry为入口,webpack从这里开始编译
-  entry: [
+  entry: { 'bundle.min.js': [
     'babel-polyfill',
-    path.join(__dirname, './src/index.js')
+    path.resolve(__dirname, './src/index.js'),
+    path.resolve(__dirname, './bdshare/bdshare.min.js')
   ],
+  'bundle.min.css': glob.sync('./@(css)/**/*.css')
+  },
   // output为输出 path代表路径 filename代表文件名称
   output: {
-    path: path.join(__dirname, './js/'),
-    filename: 'bundle.min.js',
-    publicPath: './'
+    path: path.resolve(__dirname, './build'),
+    filename: '[name]',
+    publicPath: './build/'
   },
   // module是配置所有模块要经过什么处理
   // test:处理什么类型的文件,use:用什么,include:处理这里的,exclude:不处理这里的
@@ -19,31 +27,52 @@ module.exports = {
     rules: [{
       test: /\.js$/,
       use: ['babel-loader'],
-      include: path.join(__dirname, 'src'),
       exclude: /node_modules/
-    }]
+    },
+    {
+      test: /\.css$/,
+	  use: [
+        {
+          loader: MiniCssExtractPlugin.loader,
+          options: {
+            // you can specify a publicPath here
+            // by default it uses publicPath in webpackOptions.output
+          }
+        },
+        'css-loader'
+      ]
+    },
+    {
+      test: /\.(png|jpg|jpeg|gif|ico|svg|eot|otf|ttf|woff)$/,
+      loader: 'file-loader',
+      options: {
+        outputPath: './assets/',
+        name: '[name].[hash].[ext]'
+      }
+    }
+    ]
   },
   plugins: [
-    //new CleanWebpackPlugin(['js'])
+    new MiniCssExtractPlugin({
+      // Options similar to the same options in webpackOptions.output
+      // both options are optional
+      filename: '[name].css',
+      chunkFilename: '[id].css'
+    })
   ],
+
   optimization: {
-    minimizer: [new uglify({
-      exclude: /\.min\.js$/,
+    minimize: true,
+    minimizer: [new TerserPlugin({
+      test: /\.js$/,
+      exclude: /node_modules/,
       parallel: true,
-      uglifyOptions: {
-        warnings: false,
-        parse: {},
-        compress: true,
-        mangle: true,
-        output: {
-          comments: false
-        },
-        toplevel: false,
-        nameCache: null,
-        ie8: false,
-        keep_fnames: false
+      terserOptions: {
+        compress: {},
+        mangle: true
       }
-    })]
-  },
-  mode: 'production'
+    })
+    // new OptimizeCSSAssetsPlugin({})]
+    ]
+  }
 }

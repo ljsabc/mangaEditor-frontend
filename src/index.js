@@ -1,7 +1,7 @@
 import Bowser from 'bowser'
 import 'jquery-ui'
 import 'blueimp-file-upload'
-import fabric from 'fabric'
+import 'fabric'
 global.jQuery = require('jquery')
 require('bootstrap3')
 
@@ -1365,7 +1365,7 @@ $(document).ready(function () {
   // new type of file upload handler.
 
   $('#fileupload').fileupload({
-    url: 'upload/',
+    url: '/mangaEditor/upload/',
     sequentialUploads: true,
     type: 'POST',
     error: function (e, data) {
@@ -1502,7 +1502,7 @@ $('#testTranslation').on('click', function (e) {
       translateData.lang = 'unk'
     }
     $.ajax({
-      url: 'translate/',
+      url: '/mangaEditor/translate/',
       dataType: 'json',
       method: 'POST',
       data: translateData,
@@ -1531,7 +1531,7 @@ $('#translateAll').on('click', function (e) {
     translateData.lang = 'unk'
   }
   $.ajax({
-    url: 'translateAll/',
+    url: '/mangaEditor/translateAll/',
     dataType: 'json',
     method: 'POST',
     data: translateData,
