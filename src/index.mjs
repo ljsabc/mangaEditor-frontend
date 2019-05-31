@@ -1,6 +1,5 @@
 import Bowser from 'bowser'
 import $ from 'jquery'
-const jQuery = $
 global.jQuery = $
 import 'jquery-ui'
 import 'blueimp-file-upload'
@@ -730,7 +729,6 @@ function addBalloonMasks (canvas, data, i, computedScale) {
           activeBalloon = i
           activeRect = j
 
-          var tectRectCount = data[i].textRectCount
           var waTop = data[i].textRect[j].y * computedScale + 50 + 52
           var waLeft = data[i].textRect[j].x * computedScale + 30
           var waWidth = data[i].textRect[j].width * computedScale
