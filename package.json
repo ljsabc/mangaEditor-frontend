@@ -13,10 +13,10 @@
     "@babel/cli": "^7.4.4",
     "@babel/core": "^7.4.5",
     "@babel/preset-env": "^7.4.5",
+    "@babel/register": "^7.4.4",
     "babel-loader": "^8.0.6",
-    "babel-plugin-transform-runtime": "^6.23.0",
     "babel-plugin-transform-remove-strict-mode": "0.0.2",
-    "babel-polyfill": "^6.26.0",
+    "babel-plugin-transform-runtime": "^6.23.0",
     "clean-webpack-plugin": "^3.0.0",
     "css-loader": "^2.1.1",
     "eslint": "^5.16.0",
@@ -26,19 +26,25 @@
     "eslint-plugin-promise": "^4.1.1",
     "eslint-plugin-standard": "^4.0.0",
     "file-loader": "^3.0.1",
+    "fs": "0.0.1-security",
     "glob": "^7.1.4",
     "mini-css-extract-plugin": "^0.7.0",
     "optimize-css-assets-webpack-plugin": "^5.0.1",
     "uglifyjs-webpack-plugin": "^2.1.3",
     "webpack": "^4.32.2",
-    "webpack-cli": "^3.3.2"
+    "webpack-cli": "^3.3.2",
+    "webpack-fix-style-only-entries": "^0.3.0"
   },
   "dependencies": {
+    "@babel/polyfill": "^7.4.4",
+    "analytics": "^0.1.8",
+    "analytics-plugin-ga": "^0.1.4",
     "blueimp-file-upload": "^9.31.0",
     "bootstrap3": "^3.3.5",
     "bowser": "^1.9.4",
-    "fabric": "^1.6.3",
-    "jquery": "^3.1.1",
-    "jquery-ui": "^1.12.1"
+    "fabric": "^2.4.3",
+    "jquery": "^3.4.1",
+    "jquery-ui": "^1.12.1",
+    "webfontloader": "^1.6.28"
   }
 }

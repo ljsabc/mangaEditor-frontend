@@ -3,16 +3,15 @@
 
 <head>
   <meta charset="UTF-8">
-  <title>MangaEditor 1.31b - 一个修改漫画的小工具</title>
+  <title>MangaEditor 1.40β - 一个修改漫画的小工具</title>
   <script src="js/mobile-detect.js"></script>
-  <script src="bundle.min.js"></script>
-  <link rel="stylesheet" href="bundle.css">
   <script type="text/javascript">
     var md = new MobileDetect(window.navigator.userAgent);
     if (md.mobile()) {
       location.href = "./mobile/"
     }
   </script>
+  <link rel="stylesheet" href="style.css" rel="preload">
 </head>
 
 <body>
@@ -29,25 +28,33 @@
                   class="darkroom-button darkroom-button-default disabled" id="canvasQuickEditor-Rotate"
                   data-balloon="旋转文字方向" data-balloon-pos="up"><i class="darkroom-icon-rotate-left"></i></button><button
                   class="darkroom-button darkroom-button-danger disabled" id="canvasQuickEditor-Delete"
-                  data-balloon="删除" data-balloon-pos="up"><i class="darkroom-icon-cancel"></i></button></li>
+                  data-balloon="删除" data-balloon-pos="up"><i class="darkroom-icon-cancel"></i></button>
+              </li>
               <li class="darkroom-button-group">
               <li id='canvasQuickEditor-Font' class="canvasQuickEditor" style="display:none"><select>
-                  <option value='Noto Sans SC'>思源黑体简</option>
-                  <option value='Noto Sans TC'>思源黑体繁</option>
-                  <option value='Simhei'>黑体</option>
-                  <option value='Simsun'>宋体</option>
-                  <option value='幼圆'>幼圆</option>
-                  <option value='方正卡通简体'>方正卡通简体</option>
-                  <option value='方正正黑'>方正正黑</option>
-                  <option value='Microsoft Yahei'>微软雅黑</option>
-                  <option value='Hiragino Sans GB'>Hiragino Sans GB</option>
-                </select></li><button class="darkroom-button darkroom-button-default canvasQuickEditor"
-                id="canvasQuickEditor-Shrink" data-balloon="缩小" data-balloon-pos="up"><i
-                  class="darkroom-icon-back"></i></button><button class="darkroom-button
-                        darkroom-button-default canvasQuickEditor" id="canvasQuickEditor-Enlarge" data-balloon="放大"
-                data-balloon-pos="up"><i class="darkroom-icon-forward"></i></button><button
-                class="darkroom-button darkroom-button-default canvasQuickEditor" id="canvasQuickEditor-Bold"
-                data-balloon="粗体" data-balloon-pos="up"><i class="darkroom-icon-bold"></i></button></li>
+                  <option value='"Noto Sans SC"'>思源黑体简</option>
+                  <option value='"Noto Sans TC", "Noto Sans SC"'>思源黑体繁</option>
+                  <option value='"Noto Serif SC"'>思源宋体简</option>
+                  <option value='"Noto Serif TC", "Noto Serif SC"'>思源宋体繁</option>
+                  <option value='"Microsoft Yahei"'>微软雅黑</option>
+                  <option value='Simhei, sans-serif'>黑体</option>
+                  <option value='Simsun, serif'>宋体</option>
+                  <option value='YouYuan'>幼圆</option>
+                  <option value='STXihei'>华文细黑</option>
+                  <option value='STKaiti'>华文楷体</option>
+                  <option value='"方正卡通简体"'>方正卡通简体</option>
+                  <option value='"方正正黑简体"'>方正正黑简体</option>
+                  <option value='"Hiragino Sans GB"'>Hiragino Sans GB</option>
+                  <option disabled>思源以外的字体请确保安装</option>
+                </select>
+              </li>
+              <button class="darkroom-button darkroom-button-default canvasQuickEditor" id="canvasQuickEditor-Shrink"
+                data-balloon="缩小" data-balloon-pos="up"><i class="darkroom-icon-back"></i></button>
+              <button class="darkroom-button darkroom-button-default canvasQuickEditor" id="canvasQuickEditor-Enlarge" 
+              data-balloon="放大" data-balloon-pos="up"><i class="darkroom-icon-forward"></i></button>
+              <button class="darkroom-button darkroom-button-default canvasQuickEditor" id="canvasQuickEditor-Bold"
+                data-balloon="粗体" data-balloon-pos="up"><i class="darkroom-icon-bold"></i></button>
+              </li>
             </ul>
           </div>
           <div id="dropbox" class="dropzone">
@@ -62,8 +69,7 @@
             <!-- mangaeditor-LL -->
             <ins class="adsbygoogle sqad" style="width: 100%; height:auto; display:block; margin: 0 auto;"
               data-ad-client="ca-pub-2633684480410686" data-ad-slot="2637397436"
-              data-full-width-responsive="true"></ins>
-            <span>穷是这样的啊</span>
+              data-full-width-responsive="true" title="穷是这样的啊"></ins>
           </div>
           <canvas class="imageContainer" id="balloonChecker"></canvas>
         </div>
@@ -86,7 +92,7 @@
           <div class="col-lg-12" id="balloonCheckerTooltipList">
             <div class='balloonListItem'>
               <div class='listItemImageContainer'>
-                <img class='listItemImage'></img>
+                <img class='listItemImage' alt="balloonImage"/>
               </div>
               <div class='listItemOperaions'>
                 <h3 class='listItemOperaionsTitle'>测试OCR和翻译</h3>
@@ -128,10 +134,13 @@
             </div>
 
             <div class="balloonList" id="balloonEditorMainframeList">
-              <p>如果遇到任何问题或者想提供反馈，请发送到ljsabc@gmail.com。<br /> 请注意：<ol>
-                  <li>在上传之前请尽量保证图源，不要上传灰度太大的图，否则有可能会把服务器跑挂。服务器超时三分钟，如果三分钟还没有结果就不行了。</li>
+              
+              <p><span style="color:red">这是一次大版本升级，大幅增加了流畅性和兼容性。</span>如有问题和反馈请发送到ljsabc@gmail.com。</p>
+                <ol>
+                  <li>在上传之前请尽量保证图源，不要上传灰度太大的图，否则有可能会把服务器跑挂。服务器超时5分钟，如果5分钟还没有结果就不行了。</li>
                   <li>另外请尽量不用使用某些批量工具，因为无法保证结果质量的同时，还会浪费服务器资源和一些钱。</li>
-              </p>
+                  <li>OCR的请求实在是太贵了。如果你对某个广告有兴趣欢迎点击来支持本站。</li>
+                </ol>
             </div>
           </div>
         </div>
@@ -141,7 +150,7 @@
             <p style="font-size:12px;height:0.5em;"></p>
             <!-- mangaEditor-Main -->
             <ins class="adsbygoogle" style="display:block" data-ad-client="ca-pub-2633684480410686"
-              data-ad-slot="6809680421" data-ad-format="auto" data-full-width-responsive="true"></ins>
+              data-ad-slot="6809680421" data-ad-format="auto" data-full-width-responsive="true" title="穷是这样的啊"></ins>
             <p style="font-size:12px;height:0.5em;"></p>
           </div>
         </div>
@@ -152,8 +161,7 @@
                 class="fa fa-gear"></i>刷新页面(开始下一张)</span>
             <span class="btn btn-primary" style="display:none"><i class="fa fa-gear"></i> <a id="saveImg"
                 download="download.jpg">保存图片</a> </span>
-            <span class="btn btn-success"><i
-                class="fa fa-share"></i>分享本站</span>
+            <span class="btn btn-success"><i class="fa fa-share"></i>分享本站</span>
             <a class="btn btn-warning" href="http://www.dashangcloud.com/sh/87a3ae" target="_blank">打赏本站</a>
             <a href="v2" class="btn btn-default">新版编辑器(beta)</a>
           </div>
@@ -181,7 +189,7 @@
                 },
                 "share": {}
               };
-              with(document) 0[(getElementsByTagName('head')[0] || body).appendChild(createElement(
+              with (document) 0[(getElementsByTagName('head')[0] || body).appendChild(createElement(
                 'script')).src = 'bdshare/bdshare.min.js?cdnversion=' + ~(-new Date() / 36e5)];
             </script>
 
@@ -189,16 +197,20 @@
 
         </div>
       </div>
+    </div>
+  </div>
 
-      <script async src="//pagead2.googlesyndication.com/pagead/js/adsbygoogle.js"></script>
-      <script type="text/javascript">
-        document.onreadystatechange = function () {
-          if (document.readyState == "interactive") {
-            // Initialize your application or run some code.
-            (adsbygoogle = window.adsbygoogle || []).push({});
-          }
-        }
-      </script>
+  <script src="index.js"></script>
+
+  <script async src="//pagead2.googlesyndication.com/pagead/js/adsbygoogle.js"></script>
+  <script type="text/javascript">
+    document.onreadystatechange = function () {
+      if (document.readyState == "interactive") {
+        // Initialize your application or run some code.
+        (adsbygoogle = window.adsbygoogle || []).push({});
+      }
+    }
+  </script>
 </body>
 
 </html>

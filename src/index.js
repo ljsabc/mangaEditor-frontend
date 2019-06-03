@@ -1,37 +1,23 @@
 import Bowser from 'bowser'
 import $ from 'jquery'
-global.jQuery = $
 import 'jquery-ui'
 import 'blueimp-file-upload'
-import 'fabric'
 import 'bootstrap3'
+import WebFont from 'webfontloader'
+import 'fabric'
+import Analytics from 'analytics'
+import googleAnalyticsPlugin from 'analytics-plugin-ga'
 
-
-var screenWidth = $(window).width()
-var screenHeight = $(window).height()
 var SCALE_FACTOR = 1.2
 var canvasScale = 1
+
+var fileDetails = {}
+var originalImage
 
 function getCookie (name) {
   var value = '; ' + document.cookie
   var parts = value.split('; ' + name + '=')
   if (parts.length === 2) return parts.pop().split(';').shift()
-}
-
-function setlang (lang) {
-  if (lang === 'ja') {
-    document.cookie = 'lang=ja'
-    $('#ocrLang').html("日语 <span class='caret'></span>")
-  } else if (lang === 'ko') {
-    document.cookie = 'lang=ko'
-    $('#ocrLang').html("韩语 <span class='caret'></span>")
-  } else if (lang === 'en') {
-    document.cookie = 'lang=en'
-    $('#ocrLang').html("英语 <span class='caret'></span>")
-  } else {
-    document.cookie = 'lang=unk'
-    $('#ocrLang').html("检测语言 <span class='caret'></span>")
-  }
 }
 
 function SBC2DBC (str) {
@@ -184,7 +170,7 @@ function measureTextHeight (text, fontSize, fontFamily) {
 
 function getRealCharDimension (t, fontSize, fontFamily, f) {
   var tDim
-  if (typeof fontSizeCache[t] === 'undefined' || f == true) {
+  if (typeof fontSizeCache[t] === 'undefined' || f === true) {
     // does not exist
     tDim = measureTextHeight(t, fontSize, fontFamily)
     fontSizeCache[t] = tDim
@@ -195,30 +181,48 @@ function getRealCharDimension (t, fontSize, fontFamily, f) {
   return tDim
 }
 
-var generatedRects
-var textareaLUT
-var textareaLUTSize
-var additionalTextareaLUT
-var balloonMasks = []
+var balloonLUTSize
+var balloonMasks
+var additionalTextareaMask
 
-var rects = []
 var globalCanvas
 
 var activeBalloon
 var activeRect
 
-var editMode = false
-var verticalMode = true
+var editMode
 var perTextAreaVerticalMode
 
 var globalFont = ''
 var globalFontSize = 20
 
-function generateGridSystem (canvas, text, width, height, fontSize, fontFamily, fontWeight, type, top, left, textareaId, rectId) {
-  console.log(type)
+function getObjectFromId (canvas, balloonId, rectId) {
+  const objects = canvas.getObjects()
+  // console.log("query:", objects)
+  const len = objects.length
+  let output = null
+
+  for (let i = 0; i < len; i++) {
+    if (objects[i].balloonId !== undefined && objects[i].balloonId === balloonId) {
+      if (objects[i].rectId !== undefined && objects[i].rectId === rectId) {
+        output = objects[i]
+        break
+      }
+    }
+  }
+  // console.log(output)
+  return output
+}
+
+function generateGridSystem (canvas, text, initialGroup, fontSize, fontFamily, fontWeight, type, textareaId, rectId) {
+  const width = initialGroup.get('width') * initialGroup.get('scaleX')
+  const height = initialGroup.get('height') * initialGroup.get('scaleY')
+  const top = initialGroup.get('top')
+  const left = initialGroup.get('left')
+
+  console.log(type, top, left, width, height, initialGroup.scaleX, initialGroup.scaleY, fontFamily, fontSize)
 
   if (type === true) {
-    // feel sorry that Math.trunc() is in ECMAScript 6.
     var rows = Math.floor((height + 1) / fontSize)
     var cursorPos = 0
     var grid = []
@@ -228,7 +232,7 @@ function generateGridSystem (canvas, text, width, height, fontSize, fontFamily, 
     // instantly compute the cols.
     var cols = 0
     for (var i = 0; i < text.length; i++) {
-      let dim = []
+      let dim = {}
       let t = text[i]
       if (t !== '\n') {
         if (i === text.length - 1) {
@@ -350,312 +354,365 @@ function generateGridSystem (canvas, text, width, height, fontSize, fontFamily, 
         fontSize: fontSize,
         fontWeight: fontWeight,
         angle: charAngle,
-        originX: 'center',
-        originY: 'center'
+        originX: 'left',
+        originY: 'top',
+        scaleX: 1,
+        scaleY: 1,
+        lockScalingX: true,
+        lockScalingY: true
       })
       texts.push(newText)
     }
 
-    newText = new fabric.Text('\u3000', {
-      left: 0,
-      top: fontSize,
-      fontFamily: fontFamily,
-      fontSize: fontSize,
-      angle: charAngle,
-      originX: 'center',
-      originY: 'center'
-    })
-    texts.push(newText)
-    newText = new fabric.Text('\u3000', {
-      left: 0,
-      bottom: fontSize,
-      fontFamily: fontFamily,
-      fontSize: fontSize,
-      angle: charAngle,
-      originX: 'center',
-      originY: 'center'
-    })
-    texts.push(newText)
-    newText = new fabric.Text('\u3000', {
-      left: width - fontSize,
-      bottom: fontSize,
-      fontFamily: fontFamily,
-      fontSize: fontSize,
-      angle: charAngle,
-      originX: 'center',
-      originY: 'center'
-    })
-    texts.push(newText)
-    newText = new fabric.Text('\u3000', {
-      left: width - fontSize,
-      bottom: fontSize,
-      fontFamily: fontFamily,
-      fontSize: fontSize,
-      angle: charAngle,
-      originX: 'center',
-      originY: 'center'
-    })
-    texts.push(newText)
-    var groups = new fabric.Group(texts, {
-      left: left,
-      top: top
-    })
-
-    groups.setControlsVisibility({
-      bl: false,
-      br: false,
-      tl: false,
-      tr: false
-    })
-
-    if (typeof (textareaLUT[textareaId][rectId]) !== undefined) {
-      canvas.remove(textareaLUT[textareaId][rectId])
+    for (let j = 0; j < 4; j++) {
+      let newText = new fabric.Text('\u3000', {
+        left: 0,
+        top: fontSize,
+        fontFamily: fontFamily,
+        fontSize: fontSize,
+        angle: charAngle,
+        originX: 'left',
+        originY: 'top',
+        scaleX: 1,
+        scaleY: 1,
+        lockScalingX: true,
+        lockScalingY: true
+      })
+      texts.push(newText)
     }
-    textareaLUT[textareaId][rectId] = groups
-    // groups.set({lockScalingY : true});
-    canvas.add(groups)
-    canvas.setActiveObject(groups)
+
+    let toBeDeletedTexts = []
+    initialGroup.forEachObject((obj) => {
+      toBeDeletedTexts.push(obj)
+    })
+
+    for (let text of texts) {
+      // text.on('scaling', x => x.set({ scaleX: 1, scaleY: 1 }))
+      initialGroup.add(text)
+    }
+
+    for (let text of toBeDeletedTexts) {
+      initialGroup.remove(text)
+      canvas.remove(text)
+    }
+
+    initialGroup.addWithUpdate()
+
+    initialGroup.set({
+      left: left,
+      top: top,
+      width: width,
+      height: height,
+      hasControls: true,
+      hasBorders: true,
+      selectable: true,
+      scaleX: 1,
+      scaleY: 1,
+      hoverCursor: 'pointer'
+    })
+
+    canvas.bringToFront(initialGroup)
+    // console.log(initialGroup)
   } else {
-    // console.log("here!");
-    groups = new fabric.Textbox(text, {
+    // console.log('Rotated')
+    let groups = new fabric.Textbox(text, {
       left: left,
       top: top,
       width: width,
       height: height,
       fontFamily: fontFamily,
       fontSize: fontSize,
-      fontWeight: fontWeight
+      fontWeight: fontWeight,
+      balloonId: textareaId,
+      rectId: rectId
     })
-
-    if (typeof (textareaLUT[textareaId][rectId]) !== undefined) {
-      canvas.remove(textareaLUT[textareaId][rectId])
-    }
-    textareaLUT[textareaId][rectId] = groups
-    // groups.set({lockScalingY : true});
     canvas.add(groups)
     canvas.setActiveObject(groups)
+    // groups.set({lockScalingY : true});
   }
 }
 
-function enableCanvasObjectDblclickInteraction (canvas, textareaId, rectId) {
-  textareaLUT[textareaId][rectId].on('object:click', function () {
-    var i = textareaId
-    if (i < fileDetails.balloonCount) {
-      $('img.listItemImage').attr('src', fileDetails[i].originalURL)
-      $('#testTranslation').removeClass('disabled')
-    } else {
-      $('#testTranslation').addClass('disabled')
+function enableCanvasObjectInteraction (canvas, textareaId, rectId) {
+  const target = getObjectFromId(canvas, textareaId, rectId)
+
+  if (rectId === -1) {
+    // we are working on a a mask
+    if (!target.hasOwnProperty('selectBinded')) {
+      target.on('selected', function () {
+        activeBalloon = textareaId
+        $('#originalText').val('')
+        $('#translatedText').val('')
+        $('img.listItemImage').attr('src', fileDetails[textareaId].originalURL)
+        $('#testTranslation').removeClass('disabled')
+      })
+      target.selectBinded = true
     }
-  })
+    if (!target.hasOwnProperty('dblClickBinded')) {
+      target.on('mousedblclick', function () {
+        const i = textareaId
+        const j = balloonLUTSize[i]
+        if (balloonLUTSize[i] < fileDetails[i].textRectCount) {
+          activeBalloon = i
+          activeRect = j
 
-  textareaLUT[textareaId][rectId].on('object:dblclick', function () {
-    editMode = true
+          editMode = true
+          target.set({ opacity: 1 })
 
-    $('.darkroom-icon-cancel').parent().removeClass('disabled')
-    $('.darkroom-icon-rotate-left').parent().removeClass('disabled')
-    $('.canvasQuickEditor').css('display', 'inline-block')
+          $('#canvasQuickEditor-Delete').removeClass('disabled')
+          $('#canvasQuickEditor-Rotate').removeClass('disabled')
+          $('.canvasQuickEditor').css('display', 'inline-block')
 
-    var i = textareaId
-    var j = rectId
-    activeBalloon = i
-    activeRect = j
+          $('#canvasQuickEditor').show()
 
-    if (i < fileDetails.balloonCount) {
-      $('img.listItemImage').attr('src', fileDetails[i].originalURL)
-      $('#testTranslation').removeClass('disabled')
-      $('#originalText').val('')
-      $('#translatedText').val('')
-    } else {
-      $('#testTranslation').addClass('disabled')
+          $('img.listItemImage').attr('src', fileDetails[textareaId].originalURL)
+          $('#testTranslation').removeClass('disabled')
+          $('#originalText').val('')
+          $('#translatedText').val('')
+
+          const data = target.data
+          const computedScale = target.computedScale
+
+          const waTop = data.textRect[j].y * computedScale
+          const waLeft = data.textRect[j].x * computedScale
+          const waWidth = data.textRect[j].width * computedScale
+          const waHeight = data.textRect[j].height * computedScale
+          const divTemplate = "<div class='tb-rl writingArea balloon" + i + ' rect' + j + "'contenteditable></div>"
+          $('div.canvas-container').append(divTemplate)
+
+          var font = $('#canvasQuickEditor select option:selected').val()
+          $(`.balloon${i}.rect${j}`).css({
+            'top': waTop + 'px',
+            'left': waLeft + 'px',
+            'width': waWidth + 'px',
+            'height': waHeight + 'px',
+            'font-family': font,
+            'box-shadow': '0px 0px 2px 1px #66ccff',
+            'font-size': globalFontSize
+          })
+
+          if (globalFont !== '') {
+            $(`.balloon${i}.rect${j}`).css({
+              'font-family': globalFont
+            })
+          }
+
+          $(`.balloon${i}.rect${j}`).focus()
+          perTextAreaVerticalMode[i][j] = true
+
+          $(document).on('click', function (evt) {
+            var $tgt = $(evt.target)
+            if (!$tgt.is('li,select,option') && !$tgt.is(`.balloon${i}.rect${j}`) && !$tgt.is('.writingArea div')) {
+              editMode = false
+              renderContent(canvas, i, j, false)
+              $(document).off('click')
+            }
+          })
+
+          balloonLUTSize[i] += 1
+          if (balloonLUTSize[i] === fileDetails[i].textRectCount) {
+            target.set({
+              selectable: false,
+              hoverCursor: 'default'
+            })
+          }
+        } else {
+        // no more can be added
+
+        }
+      })
+      target.dblClickBinded = true
+    }
+  } else {
+    if (!target.hasOwnProperty('rescaleBinded')) {
+      target.on('scaling', function () {
+        onObjectScaled(canvas, target)
+      })
+      target.rescaleBinded = true
+    }
+    if (target.additonalRect && !target.hasOwnProperty('movingBinded')) {
+      target.on('moving', function () {
+        const j = rectId
+        additionalTextareaMask[j].set({
+          left: target.get('left'),
+          top: target.get('top'),
+          width: target.get('width'),
+          height: target.get('height'),
+          scaleX: 1,
+          scaleY: 1
+        })
+      })
+      target.movingBinded = true
     }
 
-    var waTop = this.top + 50 + 52
-    var waLeft = this.left + 30
-    var waWidth = this.width
-    var waHeight = this.height
+    if (!target.hasOwnProperty('selectBinded')) {
+      target.on('selected', function () {
+        activeBalloon = textareaId
+        activeRect = rectId
+        $('#canvasQuickEditor-Delete').removeClass('disabled')
+        $('#canvasQuickEditor-Rotate').removeClass('disabled')
+        $('.canvasQuickEditor').css('display', 'inline-block')
+        $('#canvasQuickEditor').show()
+        $('#testTranslation').removeClass('disabled')
+        $('#originalText').val('')
+        $('#translatedText').val('')
+        if (textareaId < fileDetails.balloonCount) {
+          $('img.listItemImage').attr('src', fileDetails[textareaId].originalURL)
+        }
+      })
+      target.set({ selectBinded: true })
+    }
 
-    $('.balloon' + i + '.rect' + j).css({
-      'top': waTop,
-      'left': waLeft,
-      'width': waWidth,
-      'height': waHeight,
-      'opacity': 0.9,
-      'box-shadow': '0px 0px 2px 1px #66ccff'
-    })
+    if (!target.hasOwnProperty('movingBinded')) {
+      target.on('moving', function () {
+        const waTop = target.get('top')
+        const waLeft = target.get('left')
 
-    $('#canvasQuickEditor').css({
-      'top': waTop,
-      'left': waLeft + waWidth + 10
-    })
+        $('.balloon' + textareaId + '.rect' + rectId).css({
+          'top': waTop + 'px',
+          'left': waLeft
+        })
+      })
+      target.set({ movingBinded: true })
+    }
+    if (!target.hasOwnProperty('dblselectBinded')) {
+      target.on('mousedblclick', function () {
+        editMode = true
 
-    $('.balloon' + i + '.rect' + j).show()
-    $('.balloon' + i + '.rect' + j).focus()
-    $(document).on('click', function (evt) {
-      var $tgt = $(evt.target)
-      if (!$tgt.is('li,select,option') && !$tgt.is('.balloon' + i + '.rect' + j) && !$tgt.is('.writingArea div')) {
-        editMode = false
-        renderContent(canvas, $('.balloon' + i + '.rect' + j), i, j)
-        $(document).off('click')
-      }
-    })
-    canvas.remove(this)
-  })
+        $('#canvasQuickEditor-Delete').removeClass('disabled')
+        $('#canvasQuickEditor-Rotate').removeClass('disabled')
+        $('.canvasQuickEditor').css('display', 'inline-block')
+
+        const i = textareaId
+        const j = rectId
+
+        activeBalloon = i
+        activeRect = j
+
+        if (i < fileDetails.balloonCount) {
+          $('img.listItemImage').attr('src', fileDetails[i].originalURL)
+          $('#testTranslation').removeClass('disabled')
+          $('#originalText').val('')
+          $('#translatedText').val('')
+        } else {
+          $('#testTranslation').addClass('disabled')
+        }
+
+        let waTop = target.get('top')
+        let waLeft = target.get('left')
+        let waWidth = target.get('width')
+        let waHeight = target.get('height')
+
+        $(`.balloon${i}.rect${j}`).css({
+          'top': waTop + 'px',
+          'left': waLeft + 'px',
+          'width': waWidth + 'px',
+          'height': waHeight + 'px',
+          'opacity': 0.95,
+          'box-shadow': '0px 0px 2px 1px #66ccff'
+        })
+
+        $(`.balloon${i}.rect${j}`).show()
+        $(`.balloon${i}.rect${j}`).focus()
+        $(document).on('click', function (evt) {
+          var $tgt = $(evt.target)
+          if (!$tgt.is('li,select,option') && !$tgt.is(`.balloon${i}.rect${j}`) && !$tgt.is('.writingArea div')) {
+            editMode = false
+            renderContent(canvas, i, j, false)
+            $(document).off('click')
+          }
+        })
+        target.set({ dblselectBinded: true })
+      })
+    }
+  }
 }
 
-function onObjectSelected (canvas, e, balloonCount) {
-  var scaledObject = e.target
-  var selected = false
-  // find proper textareaID and textrectId
-
-  for (var i = 0; i < fileDetails.balloonCount; i++) {
-    // check if balloon masks was selected
-    var textareaId = 0
-    var rectId = 0
-    if (scaledObject === balloonMasks[i] && textareaLUT[i][0] === undefined) {
-      console.log('clicked')
-      activeBalloon = i
-      $('#originalText').val('')
-      $('#translatedText').val('')
-      $('img.listItemImage').attr('src', fileDetails[i].originalURL)
-      $('#testTranslation').removeClass('disabled')
-      return
-    } else {
-      $('#testTranslation').addClass('disabled')
-    }
-  }
-
-  for (let i = 0; i < balloonCount + 1; i++) {
-    for (let j = 0; j < 10; j++) {
-      if (scaledObject === textareaLUT[i][j]) {
-        textareaId = i
-        rectId = j
-        selected = true
-      }
-    }
-  }
-  if (selected) {
-    let i = textareaId
-    let j = rectId
-    activeBalloon = i
-    activeRect = j
-    if (i < fileDetails.balloonCount) {
-      $('img.listItemImage').attr('src', fileDetails[i].originalURL)
-      $('#testTranslation').removeClass('disabled')
-      $('#originalText').val('')
-      $('#translatedText').val('')
-    } else {
-      $('#testTranslation').addClass('disabled')
-    }
-
-    var waTop = scaledObject.getTop() + 50
-    var waLeft = scaledObject.getLeft()
-    var waWidth = scaledObject.getWidth()
-    var waHeight = scaledObject.getHeight()
-
-    $('#canvasQuickEditor').css({
-      'top': waTop,
-      'left': waLeft + waWidth + 10
-    })
-    $('.balloon' + i + '.rect' + j).css({
-      'top': waTop,
-      'left': waLeft
-    })
-
-    $('#canvasQuickEditor').css({
-      'top': waTop,
-      'left': waLeft + waWidth + 10
-    })
-    $('#canvasQuickEditor').show()
-  }
-}
-
-function onObjectScaled (canvas, e, balloonCount) {
-  var scaledObject = e.target
-  var selected = false
-  // find proper textareaID and textrectId
-  var textareaId = 0
-  var rectId = 0
-
-  for (let i = 0; i < balloonCount + 1; i++) {
-    for (let j = 0; j < 20; j++) {
-      if (scaledObject === textareaLUT[i][j]) {
-        textareaId = i
-        rectId = j
-        selected = true
-        console.log(i, j)
-      }
-    }
-  }
+function onObjectScaled (canvas, target) {
+  const textareaId = target.balloonId
+  const rectId = target.rectId
 
   let i = textareaId
   let j = rectId
+
   activeBalloon = i
   activeRect = j
 
   $('#originalText').val('')
   $('#translatedText').val('')
 
-  var textarea = $('.balloon' + textareaId + '.rect' + rectId)
+  const textarea = $('.balloon' + textareaId + '.rect' + rectId)
   var text = textarea.getPreText()
-  var fontSize = parseInt(textarea.css('font-size').slice(0, -2), 10)
+  var fontSize = parseInt(textarea.css('font-size'))
 
-  var waTop = scaledObject.getTop() + 50
-  var waLeft = scaledObject.getLeft()
-  var waWidth = scaledObject.getWidth()
-  var waHeight = scaledObject.getHeight()
+  const waTop = target.get('top')
+  const waLeft = target.get('left')
+  const waWidth = target.get('width')
+  const waHeight = target.get('height')
 
-  $('#canvasQuickEditor').css({
-    'top': waTop,
-    'left': waLeft + waWidth + 10
-  })
-  $('.balloon' + i + '.rect' + j).css({
-    'top': waTop,
-    'left': waLeft,
-    'width': waWidth,
-    'height': waHeight
+  $(`.balloon${i}.rect${j}`).css({
+    'top': waTop + 'px',
+    'left': waLeft + 'px',
+    'width': waWidth + 'px',
+    'height': waHeight + 'px'
   })
 
-  generateGridSystem(canvas, text, scaledObject.getWidth(), scaledObject.getHeight(), fontSize, textarea.css('font-family'), textarea.css('font-weight'), perTextAreaVerticalMode[i][j], scaledObject.getTop(), scaledObject.getLeft(), textareaId, rectId)
-  enableCanvasObjectDblclickInteraction(canvas, textareaId, rectId)
+  generateGridSystem(canvas, text, target, fontSize, textarea.css('font-family'), textarea.css('font-weight'), perTextAreaVerticalMode[i][j], textareaId, rectId)
+  if (target.additonalRect) {
+    additionalTextareaMask[j].set({
+      left: target.get('left'),
+      top: target.get('top'),
+      width: target.get('width'),
+      height: target.get('height'),
+      scaleX: 1,
+      scaleY: 1
+    })
+  }
+  // enableCanvasObjectInteraction(canvas, textareaId, rectId)
+  canvas.renderAll()
 }
 
-function renderContent (canvas, textarea, textareaId, rectId, rotation) {
+function renderContent (canvas, textareaId, rectId, additional) {
   // clear existing instance
+  const textarea = $(`.balloon${textareaId}.rect${rectId}`)
+  const width = parseFloat(textarea.css('width'))
+  const height = parseFloat(textarea.css('height'))
+  const left = parseFloat(textarea.css('left'))
+  const top = parseFloat(textarea.css('top'))
 
-  var width = parseInt(textarea.css('width').slice(0, -2), 10)
-  var height = parseInt(textarea.css('height').slice(0, -2), 10)
-  var left = parseInt(textarea.css('left').slice(0, -2), 10)
-  var top = parseInt(textarea.css('top').slice(0, -2), 10)
+  // console.log("render:", left, top, width, height)
 
-  console.log(width, height)
+  var fontSize = parseFloat(textarea.css('font-size'))
 
-  var fontSize = parseInt(textarea.css('font-size').slice(0, -2), 10)
-
-  // fix fabric alignment
-  if (rotation !== true) {
-    left = left - 30
-    top = top - 102
+  let group
+  if (getObjectFromId(canvas, textareaId, rectId)) {
+    group = getObjectFromId(canvas, textareaId, rectId)
   } else {
-    top = top - 53
-    left = left
+    group = new fabric.Group([], {
+      left: left,
+      top: top,
+      width: width,
+      height: height,
+      hasControls: true,
+      selectable: true,
+      originX: 'left',
+      originY: 'top',
+      balloonId: textareaId,
+      rectId: rectId,
+      additonalRect: additional
+    })
+    canvas.add(group)
   }
 
-  var i = textareaId
-  var j = rectId
+  const i = textareaId
+  const j = rectId
 
-  var text = textarea.getPreText()
-  generateGridSystem(canvas, text, width, height, fontSize, textarea.css('font-family'), textarea.css('font-weight'), perTextAreaVerticalMode[i][j], top, left, textareaId, rectId)
-
-  enableCanvasObjectDblclickInteraction(canvas, textareaId, rectId)
+  const text = textarea.getPreText()
+  generateGridSystem(canvas, text, group, fontSize, textarea.css('font-family'), textarea.css('font-weight'), perTextAreaVerticalMode[i][j], textareaId, rectId)
+  enableCanvasObjectInteraction(canvas, textareaId, rectId)
 
   $(textarea).hide()
+  canvas.renderAll()
 }
-
-// Interface routines
-
-var fileDetails
-var firstStageCanvas
-var originalImage
 
 function zoomTo (canvas, scale) {
   // TODO limit max cavas zoom out
@@ -663,8 +720,8 @@ function zoomTo (canvas, scale) {
   SCALE_FACTOR = scale / canvasScale
   canvasScale = scale
 
-  canvas.setHeight(canvas.getHeight() * (1 / SCALE_FACTOR))
-  canvas.setWidth(canvas.getWidth() * (1 / SCALE_FACTOR))
+  canvas.setHeight(canvas.get('height') * (1 / SCALE_FACTOR))
+  canvas.setWidth(canvas.get('width') * (1 / SCALE_FACTOR))
 
   var objects = canvas.getObjects()
   // console.log(objects);
@@ -691,142 +748,44 @@ function zoomTo (canvas, scale) {
   SCALE_FACTOR = 1.2
 }
 
-function addBalloonMasks (canvas, data, i, computedScale) {
-  console.log(i)
-  if (i === data.balloonCount) {
-    $('div.actions ul').click(function () {
-      $(this).parent().css('opacity', '0')
-    })
-  } else {
-    fabric.Image.fromURL(data[i].filledMaskURL, function (oImg) {
+function addBalloonMasks (canvas, data, computedScale) {
+  let loadCount = 0
+  for (let i = 0; i < data.balloonCount; i++) {
+    fabric.Image.fromURL(data[i].filledMaskURL, oImg => {
       // scale image down, and flip it, before adding it onto canvas
       // oImg.scale(0.5).setFlipX(true);
-      var i = balloonMasks.length
 
-      oImg.on('object:dblclick', function (e) {
-        editMode = true
+      loadCount += 1
+      $('#previewWrapper').css('filter', `blur(${5 - 5 * loadCount / data.balloonCount}px)`)
+      console.log($('#previewWrapper').css('filter'))
 
-        $('.darkroom-icon-cancel').parent().removeClass('disabled')
-        $('.darkroom-icon-rotate-left').parent().removeClass('disabled')
-        $('.canvasQuickEditor').css('display', 'inline-block')
-
-        $('#canvasQuickEditor').show()
-
-        $('img.listItemImage').attr('src', fileDetails[i].originalURL)
-        $('#testTranslation').removeClass('disabled')
-        $('#originalText').val('')
-        $('#translatedText').val('')
-
-        oImg.set({
-          opacity: 1.0,
-          selectable: false,
-          hoverCursor: 'default'
-        })
-
-        // check LUT usage for different operations.
-        var j = textareaLUTSize[i]
-        if (textareaLUTSize[i] < 2 && j < data[i].textRectCount) {
-          activeBalloon = i
-          activeRect = j
-
-          var waTop = data[i].textRect[j].y * computedScale + 50 + 52
-          var waLeft = data[i].textRect[j].x * computedScale + 30
-          var waWidth = data[i].textRect[j].width * computedScale
-          var waHeight = data[i].textRect[j].height * computedScale
-          var divTemplate = "<div class='tb-rl writingArea balloon" + i + ' rect' + j + "'contenteditable></div>"
-          $('div.canvas-container').parent().append(divTemplate)
-
-          var font = $('#canvasQuickEditor select option:selected').val()
-          $('.balloon' + i + '.rect' + j).css({
-            'top': waTop,
-            'left': waLeft,
-            'width': waWidth,
-            'height': waHeight,
-            'font-family': font,
-            'box-shadow': '0px 0px 2px 1px #66ccff',
-            'font-size': globalFontSize
-          })
-
-          if (globalFont != '') {
-            $('.balloon' + i + '.rect' + j).css({
-              'font-family': globalFont
-            })
-          }
-
-          $('#canvasQuickEditor').css({
-            'top': waTop,
-            'left': waLeft + waWidth + 10
-          })
-
-          $('.balloon' + i + '.rect' + j).focus()
-          perTextAreaVerticalMode[i][j] = true
-
-          $(document).on('click', function (evt) {
-            var $tgt = $(evt.target)
-            if (!$tgt.is('li,select,option') && !$tgt.is('.balloon' + i + '.rect' + j) && !$tgt.is('.writingArea div')) {
-              editMode = false
-              renderContent(canvas, $('.balloon' + i + '.rect' + j), i, j)
-              $(document).off('click')
-            }
-          })
-
-          textareaLUTSize[i] += 1
-        } else {
-          if (data[i].balloonCount === 1) {
-            j = 0
-          } else {
-            j = 1
-          }
-
-          activeBalloon = i
-          activeRect = j
-
-          $('#originalText').val('')
-          $('#translatedText').val('')
-
-          tectRectCount = data[i].textRectCount
-          waTop = data[i].textRect[j].y * computedScale + 50 + 52
-          waLeft = data[i].textRect[j].x * computedScale + 30
-          waWidth = data[i].textRect[j].width * computedScale
-          waHeight = data[i].textRect[j].height * computedScale
-          divTemplate = "<div class='tb-rl writingArea balloon" + i + ' rect' + j + "'contenteditable></div>"
-
-          // remove the last rect.
-          let font = $('#canvasQuickEditor select option:selected').val()
-          $('.balloon' + i + '.rect' + j).css({
-            'top': waTop,
-            'left': waLeft,
-            'width': waWidth,
-            'height': waHeight,
-            'font-family': font,
-            'box-shadow': '0px 0px 2px 1px #66ccff'
-          })
-          $('#canvasQuickEditor').css({
-            'top': waTop,
-            'left': waLeft + waWidth + 10
-          })
-
-          $('.balloon' + i + '.rect' + j).focus()
-          $(document).on('click', function (evt) {
-            var $tgt = $(evt.target)
-            if (!$tgt.is('li,select,option') && !$tgt.is('.balloon' + i + '.rect' + j) && !$tgt.is('.writingArea div')) {
-              editMode = false
-              renderContent(canvas, $('.balloon' + i + '.rect' + j), i, j)
-              $(document).off('click')
-            }
-          })
-        }
+      oImg.set({
+        opacity: 0.0,
+        selectable: true,
+        lockMovementX: true,
+        lockMovementY: true,
+        hasControls: false,
+        hasBorders: false,
+        hoverCursor: 'pointer',
+        data: data[i],
+        computedScale: computedScale,
+        balloonId: i,
+        rectId: -1
       })
+
+      oImg.scaleToWidth(fileDetails[i].boundingRect.width * computedScale)
+      oImg.scaleToHeight(fileDetails[i].boundingRect.height * computedScale)
+
       balloonMasks.push(oImg)
       canvas.add(oImg)
-      addBalloonMasks(canvas, data, i + 1, computedScale)
-      // canvas.bringToFront(oImg);
+      enableCanvasObjectInteraction(canvas, i, -1)
+      canvas.bringToFront(oImg)
     }, {
       'left': data[i].boundingRect.x * computedScale,
       'top': data[i].boundingRect.y * computedScale,
-      'width': data[i].boundingRect.width * computedScale,
-      'height': data[i].boundingRect.height * computedScale,
-      opacity: 0.10,
+      originX: 'left',
+      OriginY: 'top',
+      opacity: 0.00,
       selectable: true,
       hasControls: false,
       lockMovementX: true,
@@ -835,6 +794,10 @@ function addBalloonMasks (canvas, data, i, computedScale) {
       hoverCursor: 'pointer'
     })
   }
+  $('div.actions ul').click(function () {
+    $(this).parent().css('opacity', '0')
+  })
+  canvas.renderAll()
 }
 
 function initializeBalloonChecker (canvas, width, height, originalImage, data) {
@@ -868,27 +831,18 @@ function initializeBalloonChecker (canvas, width, height, originalImage, data) {
     // open result in new windows.
     var originalScale = canvasScale
     zoomTo(canvas, 1)
-    canvas.deactivateAll().renderAll()
+    canvas.discardActiveObject()
 
     var height = $('.lower-canvas').attr('width')
     var width = $('.lower-canvas').attr('height')
-
-    var ctx = canvas.getContext('2d')
-    ctx.imageSmoothingEnabled = false
-
-    canvas.lowerCanvasEl.getContext('2d').imageSmoothingEnabled = false
-    canvas.upperCanvasEl.getContext('2d').imageSmoothingEnabled = false
 
     $('.lower-canvas').attr('width', $('.upper-canvas').attr('width'))
     $('.lower-canvas').attr('height', $('.upper-canvas').attr('height'))
     canvas.renderAll()
 
-    d = document.getElementById('balloonChecker').toDataURL(data.type)
-    console.log(data)
-    console.log(data.type)
-    // var strDataURI = d.substr(22, d.length);
-    // var w=window.open('about:blank','image from canvas');
-    // w.document.write("<img src='"+d+"' alt='from canvas'/>");
+    let d = document.getElementById('balloonChecker').toDataURL(data.type)
+    // console.log(data)
+    // console.log(data.type)
 
     var blob = dataURLtoBlob(d)
     var objurl = URL.createObjectURL(blob)
@@ -903,17 +857,12 @@ function initializeBalloonChecker (canvas, width, height, originalImage, data) {
     zoomTo(canvas, originalScale)
   })
 
-  canvas.on('selection:cleared', function (e) {
+  canvas.on('selection:cleared', function () {
     if (!editMode) {
-      $('.darkroom-icon-cancel').parent().addClass('disabled')
-      $('.darkroom-icon-rotate-left').parent().addClass('disabled')
+      $('#canvasQuickEditor-Delete').addClass('disabled')
+      $('#canvasQuickEditor-Rotate').addClass('disabled')
       $('.canvasQuickEditor').css('display', 'none')
     }
-  })
-  canvas.on('object:selected', function (e) {
-    $('.darkroom-icon-cancel').parent().removeClass('disabled')
-    $('.darkroom-icon-rotate-left').parent().removeClass('disabled')
-    $('.canvasQuickEditor').css('display', 'inline-block')
   })
 
   // trigger add routine
@@ -941,6 +890,7 @@ function initializeBalloonChecker (canvas, width, height, originalImage, data) {
         transparentCorners: false
       })
       canvas.add(rect)
+      canvas.renderAll()
     }
 
     function addRectMouseMove (o) {
@@ -976,14 +926,13 @@ function initializeBalloonChecker (canvas, width, height, originalImage, data) {
         canvas.off('mouse:up', addRectMouseUp)
 
         var i = data.balloonCount
-        var j = textareaLUTSize[i]
+        var j = balloonLUTSize[i]
         editMode = true
 
         // currently 10 more manual rect supported.
         // this can be set manually.
         // However, 10 is enough. I think.
 
-        var j = textareaLUTSize[i]
         activeBalloon = i
         activeRect = j
 
@@ -992,25 +941,19 @@ function initializeBalloonChecker (canvas, width, height, originalImage, data) {
 
         var pointer = canvas.getPointer(o.e)
 
-        var waTop = rect.top
-        var waLeft = rect.left
-        var waWidth = Math.abs(origX - pointer.x)
-        var waHeight = Math.abs(origY - pointer.y)
-        var divTemplate = "<div class='tb-rl writingArea balloon" + i + ' rect' + j + "'contenteditable></div>"
-        $('div.canvas-container').parent().append(divTemplate)
-        $('.balloon' + i + '.rect' + j).css({
-          'top': waTop + 102,
-          'left': waLeft + 30,
-          'width': waWidth,
-          'height': waHeight,
-          'min-height': waHeight,
+        const waTop = rect.top
+        const waLeft = rect.left
+        const waWidth = Math.abs(origX - pointer.x)
+        const waHeight = Math.abs(origY - pointer.y)
+        const divTemplate = "<div class='tb-rl writingArea balloon" + i + ' rect' + j + "'contenteditable></div>"
+        $('div.canvas-container').append(divTemplate)
+        $(`.balloon${i}.rect${j}`).css({
+          'top': waTop + 'px',
+          'left': waLeft + 'px',
+          'width': waWidth + 'px',
+          'height': waHeight + 'px',
+          'min-height': waHeight + 'px',
           'box-shadow': '0px 0px 2px 1px #66ccff'
-        })
-
-        $('#canvasQuickEditor').show()
-        $('#canvasQuickEditor').css({
-          'top': waTop,
-          'left': waLeft + waWidth + 10
         })
 
         var newRect2 = new fabric.Rect({
@@ -1023,24 +966,26 @@ function initializeBalloonChecker (canvas, width, height, originalImage, data) {
           hasControls: false
         })
         canvas.add(newRect2)
+        canvas.renderAll()
         additionalTextareaMask[j] = newRect2
 
         perTextAreaVerticalMode[i][j] = true
 
-        $('.balloon' + i + '.rect' + j).focus()
+        $(`.balloon${i}.rect${j}`).focus()
 
         $(document).on('mousedown', function (evt) {
           var $tgt = $(evt.target)
-          if (!$tgt.is('li,select,option') && !$tgt.is('.balloon' + i + '.rect' + j) && !$tgt.is('.writingArea div')) {
+          if (!$tgt.is('li,select,option') && !$tgt.is(`.balloon${i}.rect${j}`) && !$tgt.is('.writingArea div')) {
             editMode = false
-            renderContent(canvas, $('.balloon' + i + '.rect' + j), i, j)
+            renderContent(canvas, i, j, true)
 
             $(document).off('mousedown')
           }
         })
 
-        textareaLUTSize[i] += 1
+        balloonLUTSize[i] += 1
         canvas.remove(rect)
+        canvas.renderAll()
       }
     }
 
@@ -1054,15 +999,16 @@ function initializeBalloonChecker (canvas, width, height, originalImage, data) {
   $('.darkroom-toolbar button').click(function (ev) {
     ev.preventDefault()
   })
-  // $("#steps-uid-0-p-1 div.canvas-container").parent().append("<div id='canvasQuickEditor'><ul><li id='canvasQuickEditor-Font'><select><option value='Simhei'>黑体</option><option value='Simsun'>宋体</option><option value='幼圆'>幼圆</option><option value='方正卡通简体'>方正卡通简体</option><option value='方正正黑'>方正正黑</option><option value='Microsoft Yahei'>微软雅黑</option><option value='Hiragino Sans GB'>柊野非衬线-GB</option></select></li><li id='canvasQuickEditor-Enlarge'>T+</li><li id='canvasQuickEditor-Shrink'>T-</li><li id='canvasQuickEditor-Bold'>B</li><li id='canvasQuickEditor-Rotate'>R</li><li id='canvasQuickEditor-Delete'>X</li></ul></div>");
   $('#canvasQuickEditor-Font select').change(function () {
     var i = activeBalloon
     var j = activeRect
     var font = $('#canvasQuickEditor-Font select option:selected').val()
     globalFont = font
-    $('.balloon' + i + '.rect' + j).css('font-family', font)
+    $(`.balloon${i}.rect${j}`).css('font-family', font)
     if (!editMode) {
-      renderContent(canvas, $('.balloon' + i + '.rect' + j), i, j, true)
+      renderContent(canvas, i, j, false)
+      const target = getObjectFromId(canvas, i, j)
+      canvas.setActiveObject(target)
     }
   })
 
@@ -1076,20 +1022,15 @@ function initializeBalloonChecker (canvas, width, height, originalImage, data) {
     var i = activeBalloon
     var j = activeRect
 
-    var top = $('#canvasQuickEditor').css('top') + 102
-    var left = $('#canvasQuickEditor').css('left') + 30
-
-    var fontSize = parseInt($('.balloon' + i + '.rect' + j).css('font-size'), 10) + 1
+    var fontSize = parseInt($(`.balloon${i}.rect${j}`).css('font-size'), 10) + 1
     globalFontSize = fontSize
 
-    $('.balloon' + i + '.rect' + j).css('font-size', fontSize + 'px')
+    $(`.balloon${i}.rect${j}`).css('font-size', fontSize + 'px')
     if (!editMode) {
-      renderContent(canvas, $('.balloon' + i + '.rect' + j), i, j, true)
+      renderContent(canvas, i, j, false)
+      const target = getObjectFromId(canvas, i, j)
+      canvas.setActiveObject(target)
     }
-    $('#canvasQuickEditor').css({
-      'top': top,
-      'left': left
-    })
 
     timeoutId = setInterval(function () {
       fontSizeCache = []
@@ -1097,15 +1038,14 @@ function initializeBalloonChecker (canvas, width, height, originalImage, data) {
       var i = activeBalloon
       var j = activeRect
 
-      var top = $('#canvasQuickEditor').css('top') + 102
-      var left = $('#canvasQuickEditor').css('left') + 30
-
-      var fontSize = parseInt($('.balloon' + i + '.rect' + j).css('font-size'), 10) + 1
+      var fontSize = parseInt($(`.balloon${i}.rect${j}`).css('font-size'), 10) + 1
       globalFontSize = fontSize
 
-      $('.balloon' + i + '.rect' + j).css('font-size', fontSize + 'px')
+      $(`.balloon${i}.rect${j}`).css('font-size', fontSize + 'px')
       if (!editMode) {
-        renderContent(canvas, $('.balloon' + i + '.rect' + j), i, j, true)
+        renderContent(canvas, i, j, false)
+        const target = getObjectFromId(canvas, i, j)
+        canvas.setActiveObject(target)
       }
     }, 150)
   }).bind('mouseup mouseleave', function () {
@@ -1117,60 +1057,52 @@ function initializeBalloonChecker (canvas, width, height, originalImage, data) {
     // clear font size cache
     fontSizeCache = []
 
-    var i = activeBalloon
-    var j = activeRect
+    const i = activeBalloon
+    const j = activeRect
 
-    var top = $('#canvasQuickEditor').css('top')
-    var left = $('#canvasQuickEditor').css('left')
-
-    var fontSize = parseInt($('.balloon' + i + '.rect' + j).css('font-size'), 10) - 1
+    var fontSize = parseInt($(`.balloon${i}.rect${j}`).css('font-size'), 10) - 1
     globalFontSize = fontSize
 
-    $('.balloon' + i + '.rect' + j).css('font-size', fontSize + 'px')
+    $(`.balloon${i}.rect${j}`).css('font-size', fontSize + 'px')
     if (!editMode) {
-      renderContent(canvas, $('.balloon' + i + '.rect' + j), i, j, true)
+      renderContent(canvas, i, j, false)
+      const target = getObjectFromId(canvas, i, j)
+      canvas.setActiveObject(target)
     }
-    $('#canvasQuickEditor').css({
-      'top': top,
-      'left': left
-    })
 
     timeoutId = setInterval(function () {
       fontSizeCache = []
 
-      var i = activeBalloon
-      var j = activeRect
+      const i = activeBalloon
+      const j = activeRect
 
-      var top = $('#canvasQuickEditor').css('top')
-      var left = $('#canvasQuickEditor').css('left')
-
-      var fontSize = parseInt($('.balloon' + i + '.rect' + j).css('font-size'), 10) - 1
+      const fontSize = parseInt($(`.balloon${i}.rect${j}`).css('font-size'), 10) - 1
       globalFontSize = fontSize
 
-      $('.balloon' + i + '.rect' + j).css('font-size', fontSize + 'px')
+      $(`.balloon${i}.rect${j}`).css('font-size', fontSize + 'px')
       if (!editMode) {
-        renderContent(canvas, $('.balloon' + i + '.rect' + j), i, j, true)
+        renderContent(canvas, i, j, false)
+        const target = getObjectFromId(canvas, i, j)
+        canvas.setActiveObject(target)
       }
-      $('#canvasQuickEditor').css({
-        'top': top,
-        'left': left
-      })
     }, 150)
   }).bind('mouseup mouseleave', function () {
     clearInterval(timeoutId)
   })
 
-  $('#canvasQuickEditor-Bold').mousedown(function (e) {
+  $('#canvasQuickEditor-Bold').mousedown(function () {
     var i = activeBalloon
     var j = activeRect
-    var isBold = $('.balloon' + i + '.rect' + j).css('font-weight')
-    if (isBold == 'bold' || isBold == '700' || parseInt(isBold, 10) == 700) {
-      $('.balloon' + i + '.rect' + j).css('font-weight', 'normal')
+    var isBold = $(`.balloon${i}.rect${j}`).css('font-weight')
+    if (isBold === 'bold' || isBold === '700' || parseInt(isBold, 10) === 700) {
+      $(`.balloon${i}.rect${j}`).css('font-weight', 'normal')
     } else {
-      $('.balloon' + i + '.rect' + j).css('font-weight', 'bold')
+      $(`.balloon${i}.rect${j}`).css('font-weight', 'bold')
     }
     if (!editMode) {
-      renderContent(canvas, $('.balloon' + i + '.rect' + j), i, j, true)
+      renderContent(canvas, i, j, false)
+      const target = getObjectFromId(canvas, i, j)
+      canvas.setActiveObject(target)
     }
   })
 
@@ -1183,15 +1115,17 @@ function initializeBalloonChecker (canvas, width, height, originalImage, data) {
       perTextAreaVerticalMode[i][j] = !perTextAreaVerticalMode[i][j]
 
       if (isVertical) {
-        $('.balloon' + i + '.rect' + j).removeClass('tb-rl')
-        $('.balloon' + i + '.rect' + j).addClass('lr-tb')
+        $(`.balloon${i}.rect${j}`).removeClass('tb-rl')
+        $(`.balloon${i}.rect${j}`).addClass('lr-tb')
       } else {
-        $('.balloon' + i + '.rect' + j).removeClass('lr-tb')
-        $('.balloon' + i + '.rect' + j).addClass('tb-rl')
+        $(`.balloon${i}.rect${j}`).removeClass('lr-tb')
+        $(`.balloon${i}.rect${j}`).addClass('tb-rl')
       }
 
       if (!editMode) {
-        renderContent(canvas, $('.balloon' + i + '.rect' + j), i, j, true)
+        renderContent(canvas, i, j, false)
+        const target = getObjectFromId(canvas, i, j)
+        canvas.setActiveObject(target)
       }
     }
   })
@@ -1199,99 +1133,74 @@ function initializeBalloonChecker (canvas, width, height, originalImage, data) {
   $('#canvasQuickEditor-Delete').mousedown(function (ev) {
     if (!$(this).hasClass('disabled')) {
       ev.preventDefault()
-      var i = activeBalloon
-      var j = activeRect
+      const i = activeBalloon
+      const j = activeRect
+      canvas.remove(getObjectFromId(canvas, i, j))
+      canvas.remove(additionalTextareaMask[j])
+      $(`.balloon${i}.rect${j}`).remove()
+      for (let t = j + 1; t < balloonLUTSize[i]; t++) {
+        let target = getObjectFromId(canvas, i, t)
+        target.rectId = t - 1
+        additionalTextareaMask[t - 1] = additionalTextareaMask[t]
+        $(`.balloon${i}.rect${t}`).removeClass(`.rect${t}`).addClass(`rect${t - 1}`)
 
-      if (i != fileDetails.balloonCount) {
-        for (var t = 0; t < textareaLUTSize[i]; t++) {
-          $('.balloon' + i + '.rect' + t).remove()
-          canvas.remove(textareaLUT[i][t])
-        }
+        // refresh each textarea
+        const waTop = target.top
+        const waLeft = target.left
+        const waWidth = target.width
+        const waHeight = target.height
 
-        textareaLUT[i].length = 0
-        textareaLUT[i] = Array(10)
-        textareaLUTSize[i] = 0
-        balloonMasks[i].set({
-          opacity: 0.1,
-          selectable: true,
-          hoverCursor: 'pointer'
+        $(`.balloon${i}.rect${t}`).css({
+          'top': waTop + 'px',
+          'left': waLeft + 'px',
+          'width': waWidth + 'px',
+          'height': waHeight + 'px',
+          'opacity': 0.95,
+          'box-shadow': '0px 0px 2px 1px #66ccff'
         })
-        canvas.renderAll()
-
-        $('#canvasQuickEditor').hide()
-      } else {
-        canvas.remove(textareaLUT[i][j])
-
-        canvas.remove(additionalTextareaMask[j])
-        textareaLUTSize[i] -= 1
-        for (var t = j; t < textareaLUTSize; t++) {
-          textareaLUT[i][t] = textareaLUT[i][t + 1]
-
-          additionalTextareaMask[t] = additionalTextareaMask[t + 1]
-
-          // refresh each textarea
-          var obj = textareaLUT[i][t]
-          var waTop = obj.top + 52
-          var waLeft = obj.left
-          var waWidth = obj.width
-          var waHeight = obj.height
-
-          $('.balloon' + i + '.rect' + t).css({
-            'top': waTop,
-            'left': waLeft,
-            'width': waWidth,
-            'height': waHeight,
-            'opacity': 0.9,
-            'box-shadow': '0px 0px 2px 1px #66ccff'
-          })
-        }
-        $('#canvasQuickEditor').hide()
       }
+      balloonLUTSize[i] -= 1
+      console.log(balloonLUTSize[i])
+      if (balloonLUTSize[i] === 0) {
+        const oImg = getObjectFromId(canvas, i, -1)
+        oImg.set({
+          opacity: 0.0
+        })
+      }
+      canvas.renderAll()
     }
   })
 
   // initial editing sequence
-  var loadedImageCount = 0
   canvas.on('after:render', function () {
     canvas.calcOffset()
   })
-  canvas.on('object:scaling', function (ev) {
-    onObjectScaled(canvas, ev, data.balloonCount)
-  })
-  canvas.on('object:selected', function (ev) {
-    onObjectSelected(canvas, ev, data.balloonCount)
-  })
-  canvas.on('object:moving', function (ev) {
-    onObjectSelected(canvas, ev, data.balloonCount)
-  })
+
   canvas.setHeight(height)
   canvas.setWidth(width)
-
-  textareaLUT = new Array(data.balloonCount)
   perTextAreaVerticalMode = new Array(data.balloonCount + 1)
+  balloonLUTSize = new Array(data.balloonCount + 1)
 
-  let additionalTextareaMask = new Array(20)
-  let textareaLUTSize = []
+  additionalTextareaMask = []
+
   for (let i = 0; i < data.balloonCount + 1; i++) {
-    textareaLUT[i] = new Array(20)
-    textareaLUTSize.push(0)
-    perTextAreaVerticalMode[i] = new Array(20)
+    perTextAreaVerticalMode[i] = new Array(10)
+    balloonLUTSize[i] = 0
   }
 
   fabric.Image.fromURL(originalImage, function (oImg) {
     canvas.add(oImg)
     canvas.sendToBack(oImg)
-    // loadedImageCount += 1;
-    // if(loadedImageCount == data.balloonCount + 1)
-    // {
-    let computedScale = (screenWidth * 0.46667 - 62) / width
-    console.log(computedScale)
-    addBalloonMasks(canvas, data, 0, computedScale)
+
+    // width -> screenwidth
+    let computedScale = (Math.trunc(parseInt($('#previewWrapper').css('width'))) - 1) / width
+    // console.log(computedScale)
+    addBalloonMasks(canvas, data, computedScale)
     zoomTo(canvas, 1 / computedScale)
 
     $('#balloonChecker').fadeIn()
+    $('#previewWrapper').css('border', 'none')
     $('#translateAll').removeClass('disabled')
-    // }
   }, {
     'left': 0,
     'top': 0,
@@ -1301,14 +1210,29 @@ function initializeBalloonChecker (canvas, width, height, originalImage, data) {
     selectable: false,
     hasControls: false
   })
+  canvas.renderAll()
 }
 
 $(document).ready(function () {
+  // process web fonts
+  WebFont.load({
+    custom: {
+      families: ['Noto Sans SC:n4,n7', 'Noto Serif SC:n4,n7', 'Noto Sans TC:n4,n7', 'Noto Serif TC:n4,n7'],
+      urls: ['bundle.css']
+    }
+  })
+
+  // initialize some variables
+  activeBalloon = 0
+  activeRect = 0
+
+  editMode = false
+  balloonMasks = []
+
   $('.navItem:first').css({
     'border-bottom': '1px solid #E34F00'
   })
 
-  var viewportWidth = $(window).width()
   var viewportHeight = $(window).height()
 
   if (viewportHeight <= 620) {
@@ -1318,7 +1242,6 @@ $(document).ready(function () {
   }
 
   $(window).resize(function () {
-    viewportWidth = $(window).width()
     viewportHeight = $(window).height()
     if (viewportHeight <= 620) {
       $('#centerDisp').css({
@@ -1391,7 +1314,7 @@ $(document).ready(function () {
     preloadArr[i].src = imgArr[i]
   }
 
-  $('#fileupload').bind('fileuploadadd', function (e, file) {
+  $('#fileupload').bind('fileuploadadd', function () {
     function changeImg () {
       $('#dropbox').css('background-image', 'url(' + preloadArr[currImg++ % preloadArr.length].src + ')')
     }
@@ -1404,7 +1327,6 @@ $(document).ready(function () {
 
     // initialize and render canvas -> async
     var rawfile = file.files[0]
-    // console.log(file);
     var reader = new FileReader(rawfile)
     reader.readAsDataURL(rawfile)
     reader.onload = function (e) {
@@ -1412,7 +1334,15 @@ $(document).ready(function () {
       var data = e.target.result
       originalImage = data
       fileDetails.type = rawfile.type
-      var canvas = new fabric.CanvasEx('balloonChecker')
+      var canvas = new fabric.Canvas('balloonChecker', {
+        renderOnAddRemove: false,
+        preserveObjectStacking: true
+      })
+      canvas.selection = false
+      let ctx = canvas.getContext('2d')
+      ctx.imageSmoothingEnabled = false
+      canvas.lowerCanvasEl.getContext('2d').imageSmoothingEnabled = false
+      canvas.upperCanvasEl.getContext('2d').imageSmoothingEnabled = false
       globalCanvas = canvas
       initializeBalloonChecker(canvas, fileDetails.dim.cols, fileDetails.dim.rows, originalImage, fileDetails)
     }
@@ -1430,9 +1360,9 @@ $(document).ready(function () {
   $('#openGomiBox').click(function () {
     $('#disqus_thread').toggle()
   })
-  $('.btn-success:first').click((e)=>{
+  $('.btn-success:first').click(() => {
     $('.bdsharebuttonbox').toggle()
-  });
+  })
 
   // page scroll
   var verticalFlag = false
@@ -1491,7 +1421,8 @@ $(document).ready(function () {
 })
 
 // Translations
-$('#testTranslation').on('click', function (e) {
+$('#testTranslation').on('click', function () {
+  // console.log(activeBalloon, fileDetails.balloonCount)
   if (!$(this).hasClass('disabled') && activeBalloon < fileDetails.balloonCount) {
     $('#translationIndicator').show()
     let translateData = {
@@ -1518,7 +1449,7 @@ $('#testTranslation').on('click', function (e) {
 })
 
 // Translations
-$('#translateAll').on('click', function (e) {
+$('#translateAll').on('click', function () {
   if ($(this).hasClass('disabled')) {
     return
   }
@@ -1543,12 +1474,12 @@ $('#translateAll').on('click', function (e) {
       }
     },
     success: function (data) {
-      console.log(data)
+      // console.log(data)
       $('textarea#translateAllResults').attr('rows', data.result.length)
       $('textarea#translateAllResults').html('')
-      for (var i = 0; i < data.result.length; i++) {
+      for (let i = 0; i < data.result.length; i++) {
         $('textarea#translateAllResults').append(data.result[i])
-        if (i != data.result.length - 1) {
+        if (i !== data.result.length - 1) {
           $('textarea#translateAllResults').append('\n')
         }
       }
@@ -1556,7 +1487,7 @@ $('#translateAll').on('click', function (e) {
 
       // bind click event
       $('#translateAllResults').off('click')
-      $('#translateAllResults').on('click', function (ev) {
+      $('#translateAllResults').on('click', function () {
         var t = $('#translateAllResults')[0]
         var currentLine = (t.value.substr(0, t.selectionStart).split('\n').length)
         globalCanvas.setActiveObject(balloonMasks[data.orders[currentLine - 1]])
@@ -1565,7 +1496,19 @@ $('#translateAll').on('click', function (e) {
       $('textarea#translateAllResults').fadeIn()
     }
   })
-});
+})
+
+/* sweet tracking code */
+const analytics = Analytics({
+  app: 'mangaEditor',
+  version: 140,
+  plugins: [
+    googleAnalyticsPlugin({
+      trackingId: 'UA-49145449-1'
+    })
+  ]
+})
+analytics.page()
 
 /// /////////////////////////////////////////
 /*
@@ -1663,40 +1606,30 @@ Show balloon detail when clicking on the textarea.
 v 1.3
 Optimized for translations
 
+v 1.4
+Rewritten with fabricjs 2
+Rebuilt with webpack
+Integrate with multiple optimizations
+
 Known bugs
 
 + sidebar style issues
-+ CORS ajax support for firefox failed.
++ balloons with rect > 1 cannot be clicked twice
++ rotation not working actually
 
 TODO:
 
-+ Trying to match font-size with original template
-+ Redesign text editing logic.
-+ Escape for special characters.
+*Frontend*
 + Line-height for vertical texts.
-+ Sidebar panel off-site editing.
 + Mask half of the balloon when there is multiple rectangles.
 + Search for nearest neighbour to activate, but not in order.
-+ Shortcuts
-+ Mask only half of the balloon, when there are multiple candidates.
-+ Server optimization
-+ Scribble tool ( under consideration )
++ Keyboard Shortcuts(CTRL+S/DEL)
++ Single step undo(ctrl+Z)
++ Change font color/background color of manually added regions
++ PWA-fy the website
+
+*Backend*
++ Trying to match font-size with original template
++ Scribble tool (under consideration, maybe wontfix)
 
 */
-
-/* sweet tracking code */
-
-(function (i, s, o, g, r, a, m) {
-  i['GoogleAnalyticsObject'] = r
-  i[r] = i[r] || function () {
-    (i[r].q = i[r].q || []).push(arguments)
-  }, i[r].l = 1 * new Date()
-  a = s.createElement(o),
-  m = s.getElementsByTagName(o)[0]
-  a.async = 1
-  a.src = g
-  m.parentNode.insertBefore(a, m)
-})(window, document, 'script', '//www.google-analytics.com/analytics.js', 'ga')
-
-ga('create', 'UA-49145449-1', 'auto')
-ga('send', 'pageview')
