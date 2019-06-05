@@ -1,6 +1,6 @@
 /* layout */
 
-@media(max-width:560px) {
+@media(max-width:640px) {
     #headerNav {
         margin-right: 0px !important;
     }
@@ -15,6 +15,9 @@
 
     li.navItem {
         margin-right: 20px !important;
+    }
+    #dropbox{
+        width: 85% !important;
     }
 }
 
@@ -218,16 +221,17 @@ li.navItem a:hover {
 #dropbox {
     border-radius: 4px;
     position: relative;
-    height: 20%;
-    min-height: 20%;
+    height: 16%;
+    max-height: 210px;
     overflow: hidden;
     padding: 0px;
-    width: 75%;
+    width: 64%;
     border: 1px #ccc dashed;
+    background-color: #FFF;
     margin: 0 auto;
     margin-top: 15%;
     background-image: url("../img/intro-0.png");
-    background-size: cover;
+    background-size: contain;
     background-repeat: no-repeat;
 
     opacity: 1.0;
@@ -253,6 +257,12 @@ li.navItem a:hover {
     position: absolute;
     bottom: 0px;
     background-color: #F17E3C;
+}
+
+#balloonChecker{
+    position: absolute;
+    left: 0px;
+    top: 0px;
 }
 
 .canvas-container {
@@ -391,6 +401,10 @@ div.listItemOperaions {
     z-index: 99;
     border: 0;
     white-space: nowrap
+}
+
+.darkroom-toolbar-actions{
+    padding-inline-start: 0;
 }
 
 .darkroom-toolbar-actions li {
@@ -601,18 +615,17 @@ div.focus {
     opacity: 0.7;
 }
 
-
-
 #previewPanel {
-    height: 80vh;
+    height: 100%;
+    overflow: visible;
 }
 
 #previewWrapper {
-    height: 100%;
-    margin: 20px;
-    margin-top: 60px;
-    padding: 0;
+    height: 92%;
+    margin: 5% 25px 0 25px;
+    padding: 0 0 10px 0;
     border: 1px solid #aaa;
+    position: relative;
 }
 
 #imagePreview {
@@ -621,7 +634,7 @@ div.focus {
 }
 
 #editPanel {
-    padding: 40px 0px 0 0px;
+    margin: 5% 0px 0 0px;
 }
 
 #theEditor {

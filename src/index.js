@@ -13,6 +13,7 @@ var canvasScale = 1
 
 var fileDetails = {}
 var originalImage
+var canvasBackground
 
 function getCookie (name) {
   var value = '; ' + document.cookie
@@ -424,7 +425,12 @@ function generateGridSystem (canvas, text, initialGroup, fontSize, fontFamily, f
       fontSize: fontSize,
       fontWeight: fontWeight,
       balloonId: textareaId,
-      rectId: rectId
+      rectId: rectId,
+      hasControls: true,
+      hasBorders: true,
+      selectable: true,
+      scaleX: 1,
+      scaleY: 1
     })
     canvas.add(groups)
     canvas.setActiveObject(groups)
@@ -472,19 +478,19 @@ function enableCanvasObjectInteraction (canvas, textareaId, rectId) {
           const data = target.data
           const computedScale = target.computedScale
 
-          const waTop = data.textRect[j].y * computedScale
-          const waLeft = data.textRect[j].x * computedScale
-          const waWidth = data.textRect[j].width * computedScale
-          const waHeight = data.textRect[j].height * computedScale
+          const top = data.textRect[j].y * computedScale
+          const left = data.textRect[j].x * computedScale
+          const width = data.textRect[j].width * computedScale
+          const height = data.textRect[j].height * computedScale
           const divTemplate = "<div class='tb-rl writingArea balloon" + i + ' rect' + j + "'contenteditable></div>"
           $('div.canvas-container').append(divTemplate)
 
           var font = $('#canvasQuickEditor select option:selected').val()
           $(`.balloon${i}.rect${j}`).css({
-            'top': waTop + 'px',
-            'left': waLeft + 'px',
-            'width': waWidth + 'px',
-            'height': waHeight + 'px',
+            'top': top + 'px',
+            'left': left + 'px',
+            'width': width + 'px',
+            'height': height + 'px',
             'font-family': font,
             'box-shadow': '0px 0px 2px 1px #66ccff',
             'font-size': globalFontSize
@@ -564,12 +570,12 @@ function enableCanvasObjectInteraction (canvas, textareaId, rectId) {
 
     if (!target.hasOwnProperty('movingBinded')) {
       target.on('moving', function () {
-        const waTop = target.get('top')
-        const waLeft = target.get('left')
+        const top = target.get('top')
+        const left = target.get('left')
 
         $('.balloon' + textareaId + '.rect' + rectId).css({
-          'top': waTop + 'px',
-          'left': waLeft
+          'top': top + 'px',
+          'left': left
         })
       })
       target.set({ movingBinded: true })
@@ -597,16 +603,16 @@ function enableCanvasObjectInteraction (canvas, textareaId, rectId) {
           $('#testTranslation').addClass('disabled')
         }
 
-        let waTop = target.get('top')
-        let waLeft = target.get('left')
-        let waWidth = target.get('width')
-        let waHeight = target.get('height')
+        let top = target.get('top')
+        let left = target.get('left')
+        let width = target.get('width')
+        let height = target.get('height')
 
         $(`.balloon${i}.rect${j}`).css({
-          'top': waTop + 'px',
-          'left': waLeft + 'px',
-          'width': waWidth + 'px',
-          'height': waHeight + 'px',
+          'top': top + 'px',
+          'left': left + 'px',
+          'width': width + 'px',
+          'height': height + 'px',
           'opacity': 0.95,
           'box-shadow': '0px 0px 2px 1px #66ccff'
         })
@@ -644,16 +650,16 @@ function onObjectScaled (canvas, target) {
   var text = textarea.getPreText()
   var fontSize = parseInt(textarea.css('font-size'))
 
-  const waTop = target.get('top')
-  const waLeft = target.get('left')
-  const waWidth = target.get('width')
-  const waHeight = target.get('height')
+  const top = target.get('top')
+  const left = target.get('left')
+  const width = target.get('width')
+  const height = target.get('height')
 
   $(`.balloon${i}.rect${j}`).css({
-    'top': waTop + 'px',
-    'left': waLeft + 'px',
-    'width': waWidth + 'px',
-    'height': waHeight + 'px'
+    'top': top + 'px',
+    'left': left + 'px',
+    'width': width + 'px',
+    'height': height + 'px'
   })
 
   generateGridSystem(canvas, text, target, fontSize, textarea.css('font-family'), textarea.css('font-weight'), perTextAreaVerticalMode[i][j], textareaId, rectId)
@@ -742,6 +748,20 @@ function zoomTo (canvas, scale) {
     objects[i].top = tempTop
 
     objects[i].setCoords()
+
+    if (objects[i].balloonId && objects[i].rectId) {
+      const textarea = $(`.balloon${objects[i].balloonId}.rect${objects[i].rectId}`)
+      const width = parseFloat(textarea.css('width'))
+      const height = parseFloat(textarea.css('height'))
+      const left = parseFloat(textarea.css('left'))
+      const top = parseFloat(textarea.css('top'))
+      $(`.balloon${objects[i].balloonId}.rect${objects[i].rectId}`).css({
+        'top': width + 'px',
+        'left': height + 'px',
+        'width': left + 'px',
+        'height': top + 'px'
+      })
+    }
   }
 
   canvas.renderAll()
@@ -854,6 +874,8 @@ function initializeBalloonChecker (canvas, width, height, originalImage, data) {
     $('.lower-canvas').attr('width', width)
     $('.lower-canvas').attr('height', height)
 
+    $('#previewPanel').css('height', 'auto')
+
     zoomTo(canvas, originalScale)
   })
 
@@ -941,18 +963,18 @@ function initializeBalloonChecker (canvas, width, height, originalImage, data) {
 
         var pointer = canvas.getPointer(o.e)
 
-        const waTop = rect.top
-        const waLeft = rect.left
-        const waWidth = Math.abs(origX - pointer.x)
-        const waHeight = Math.abs(origY - pointer.y)
+        const top = rect.top
+        const left = rect.left
+        const width = Math.abs(origX - pointer.x)
+        const height = Math.abs(origY - pointer.y)
         const divTemplate = "<div class='tb-rl writingArea balloon" + i + ' rect' + j + "'contenteditable></div>"
         $('div.canvas-container').append(divTemplate)
         $(`.balloon${i}.rect${j}`).css({
-          'top': waTop + 'px',
-          'left': waLeft + 'px',
-          'width': waWidth + 'px',
-          'height': waHeight + 'px',
-          'min-height': waHeight + 'px',
+          'top': top + 'px',
+          'left': left + 'px',
+          'width': width + 'px',
+          'height': height + 'px',
+          'min-height': height + 'px',
           'box-shadow': '0px 0px 2px 1px #66ccff'
         })
 
@@ -1145,16 +1167,16 @@ function initializeBalloonChecker (canvas, width, height, originalImage, data) {
         $(`.balloon${i}.rect${t}`).removeClass(`.rect${t}`).addClass(`rect${t - 1}`)
 
         // refresh each textarea
-        const waTop = target.top
-        const waLeft = target.left
-        const waWidth = target.width
-        const waHeight = target.height
+        const top = target.top
+        const left = target.left
+        const width = target.width
+        const height = target.height
 
         $(`.balloon${i}.rect${t}`).css({
-          'top': waTop + 'px',
-          'left': waLeft + 'px',
-          'width': waWidth + 'px',
-          'height': waHeight + 'px',
+          'top': top + 'px',
+          'left': left + 'px',
+          'width': width + 'px',
+          'height': height + 'px',
           'opacity': 0.95,
           'box-shadow': '0px 0px 2px 1px #66ccff'
         })
@@ -1198,6 +1220,8 @@ function initializeBalloonChecker (canvas, width, height, originalImage, data) {
     addBalloonMasks(canvas, data, computedScale)
     zoomTo(canvas, 1 / computedScale)
 
+    canvasBackground = oImg
+
     $('#balloonChecker').fadeIn()
     $('#previewWrapper').css('border', 'none')
     $('#translateAll').removeClass('disabled')
@@ -1218,7 +1242,7 @@ $(document).ready(function () {
   WebFont.load({
     custom: {
       families: ['Noto Sans SC:n4,n7', 'Noto Serif SC:n4,n7', 'Noto Sans TC:n4,n7', 'Noto Serif TC:n4,n7'],
-      urls: ['bundle.css']
+      urls: ['style.css']
     }
   })
 
@@ -1233,24 +1257,10 @@ $(document).ready(function () {
     'border-bottom': '1px solid #E34F00'
   })
 
-  var viewportHeight = $(window).height()
-
-  if (viewportHeight <= 620) {
-    $('#centerDisp').css({
-      'padding-top': 620 - viewportHeight + 'px'
-    })
-  }
-
   $(window).resize(function () {
-    viewportHeight = $(window).height()
-    if (viewportHeight <= 620) {
-      $('#centerDisp').css({
-        'padding-top': 620 - viewportHeight + 'px'
-      })
-    } else {
-      $('#centerDisp').css({
-        'padding-top': 0 + 'px'
-      })
+    if ($('.canvas-container').length) {
+      let computedScale = (Math.trunc(parseInt($('#previewWrapper').css('width'))) - 1) / (canvasBackground.width)
+      zoomTo(globalCanvas, 1 / computedScale)
     }
   })
 
@@ -1365,30 +1375,7 @@ $(document).ready(function () {
   })
 
   // page scroll
-  var verticalFlag = false
-  $(document).scroll(function () {
-    var d = $(document).scrollTop()
-    // console.log(d);
-    if (d > 350) {
-      verticalFlag = true
-      if (verticalFlag) {
-        $('#balloonCheckerTooltipList').css({
-          'position': 'fixed',
-          'top': '30px',
-          'width': '40%'
-        })
-      }
-    } else {
-      if (verticalFlag) {
-        verticalFlag = false
-        $('#balloonCheckerTooltipList').css({
-          'position': 'relative',
-          'top': '0px',
-          'width': 'auto'
-        })
-      }
-    }
-  })
+
 
   // dropbox styles
   $(document).bind('dragover', function (e) {
