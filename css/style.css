@@ -268,7 +268,29 @@ li.navItem a:hover {
 .canvas-container {
     float: left;
     box-shadow: 1px 0px 1.5px #777;
+    height:100% !important;
+    overflow-x: hidden;
+    overflow-y: scroll;
+    scrollbar-width: 6px; /* Firefox */
+    -ms-overflow-style: scrollbar;  /* IE 10+ */
 }
+.canvas-container::-webkit-scrollbar-track
+{
+	-webkit-box-shadow: inset 0 0 6px rgba(255,255,255,0.3);
+	background-color: #F5F5F5;
+}
+
+.canvas-container::-webkit-scrollbar
+{
+	width: 6px;
+	background-color: #F5F5F5;
+}
+
+.canvas-container::-webkit-scrollbar-thumb
+{
+	background-color: #c5c5c5;
+}
+
 
 .sidebar {
     float: right;

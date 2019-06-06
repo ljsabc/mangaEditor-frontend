@@ -365,7 +365,7 @@ function generateGridSystem (canvas, text, initialGroup, fontSize, fontFamily, f
       texts.push(newText)
     }
 
-    for (let j = 0; j < 4; j++) {
+    for (let j = 0; j < 7; j++) {
       let newText = new fabric.Text('\u3000', {
         left: 0,
         top: fontSize,
@@ -411,11 +411,9 @@ function generateGridSystem (canvas, text, initialGroup, fontSize, fontFamily, f
       scaleY: 1,
       hoverCursor: 'pointer'
     })
-
     canvas.bringToFront(initialGroup)
-    // console.log(initialGroup)
+
   } else {
-    // console.log('Rotated')
     let groups = new fabric.Textbox(text, {
       left: left,
       top: top,
@@ -429,12 +427,11 @@ function generateGridSystem (canvas, text, initialGroup, fontSize, fontFamily, f
       hasControls: true,
       hasBorders: true,
       selectable: true,
+      editable: false,
       scaleX: 1,
       scaleY: 1
     })
     canvas.add(groups)
-    canvas.setActiveObject(groups)
-    // groups.set({lockScalingY : true});
   }
 }
 
@@ -446,6 +443,10 @@ function enableCanvasObjectInteraction (canvas, textareaId, rectId) {
     if (!target.hasOwnProperty('selectBinded')) {
       target.on('selected', function () {
         activeBalloon = textareaId
+        activeRect = rectId
+        $('.canvasQuickEditor').css('display', 'none')
+        $('#canvasQuickEditor-Delete').addClass('disabled')
+        $('#canvasQuickEditor-Rotate').addClass('disabled')
         $('#originalText').val('')
         $('#translatedText').val('')
         $('img.listItemImage').attr('src', fileDetails[textareaId].originalURL)
@@ -507,9 +508,10 @@ function enableCanvasObjectInteraction (canvas, textareaId, rectId) {
 
           $(document).on('click', function (evt) {
             var $tgt = $(evt.target)
-            if (!$tgt.is('li,select,option') && !$tgt.is(`.balloon${i}.rect${j}`) && !$tgt.is('.writingArea div')) {
+            if (!$tgt.is('li,select,option,button,i') && !$tgt.is(`.balloon${i}.rect${j}`) && !$tgt.is('.writingArea div')) {
               editMode = false
               renderContent(canvas, i, j, false)
+              canvas.trigger('object:selected', { target: target })
               $(document).off('click')
             }
           })
@@ -549,7 +551,6 @@ function enableCanvasObjectInteraction (canvas, textareaId, rectId) {
       })
       target.movingBinded = true
     }
-
     if (!target.hasOwnProperty('selectBinded')) {
       target.on('selected', function () {
         activeBalloon = textareaId
@@ -575,7 +576,7 @@ function enableCanvasObjectInteraction (canvas, textareaId, rectId) {
 
         $('.balloon' + textareaId + '.rect' + rectId).css({
           'top': top + 'px',
-          'left': left
+          'left': left + 'px'
         })
       })
       target.set({ movingBinded: true })
@@ -613,7 +614,7 @@ function enableCanvasObjectInteraction (canvas, textareaId, rectId) {
           'left': left + 'px',
           'width': width + 'px',
           'height': height + 'px',
-          'opacity': 0.95,
+          'opacity': 1,
           'box-shadow': '0px 0px 2px 1px #66ccff'
         })
 
@@ -621,9 +622,10 @@ function enableCanvasObjectInteraction (canvas, textareaId, rectId) {
         $(`.balloon${i}.rect${j}`).focus()
         $(document).on('click', function (evt) {
           var $tgt = $(evt.target)
-          if (!$tgt.is('li,select,option') && !$tgt.is(`.balloon${i}.rect${j}`) && !$tgt.is('.writingArea div')) {
+          if (!$tgt.is('li,select,option,button,i') && !$tgt.is(`.balloon${i}.rect${j}`) && !$tgt.is('.writingArea div')) {
             editMode = false
             renderContent(canvas, i, j, false)
+            canvas.trigger('object:selected', { target: target })
             $(document).off('click')
           }
         })
@@ -643,37 +645,29 @@ function onObjectScaled (canvas, target) {
   activeBalloon = i
   activeRect = j
 
-  $('#originalText').val('')
-  $('#translatedText').val('')
+  console.log(perTextAreaVerticalMode[i][j])
 
-  const textarea = $('.balloon' + textareaId + '.rect' + rectId)
-  var text = textarea.getPreText()
-  var fontSize = parseInt(textarea.css('font-size'))
+  if (perTextAreaVerticalMode[i][j]) {
+    $('#originalText').val('')
+    $('#translatedText').val('')
 
-  const top = target.get('top')
-  const left = target.get('left')
-  const width = target.get('width')
-  const height = target.get('height')
-
-  $(`.balloon${i}.rect${j}`).css({
-    'top': top + 'px',
-    'left': left + 'px',
-    'width': width + 'px',
-    'height': height + 'px'
-  })
-
-  generateGridSystem(canvas, text, target, fontSize, textarea.css('font-family'), textarea.css('font-weight'), perTextAreaVerticalMode[i][j], textareaId, rectId)
-  if (target.additonalRect) {
-    additionalTextareaMask[j].set({
-      left: target.get('left'),
-      top: target.get('top'),
-      width: target.get('width'),
-      height: target.get('height'),
-      scaleX: 1,
-      scaleY: 1
-    })
+    renderContent(canvas, textareaId, rectId, target.additionalRect)
+    if (target.additonalRect) {
+      additionalTextareaMask[j].set({
+        left: target.get('left'),
+        top: target.get('top'),
+        width: target.get('width'),
+        height: target.get('height'),
+        scaleX: 1,
+        scaleY: 1
+      })
+    }
+    // enableCanvasObjectInteraction(canvas, textareaId, rectId)
+  } else {
+    // if horizontal mode
+    // should be somehow quite simple.
+    // TODO
   }
-  // enableCanvasObjectInteraction(canvas, textareaId, rectId)
   canvas.renderAll()
 }
 
@@ -684,15 +678,18 @@ function renderContent (canvas, textareaId, rectId, additional) {
   const height = parseFloat(textarea.css('height'))
   const left = parseFloat(textarea.css('left'))
   const top = parseFloat(textarea.css('top'))
-
   // console.log("render:", left, top, width, height)
 
   var fontSize = parseFloat(textarea.css('font-size'))
 
   let group
-  if (getObjectFromId(canvas, textareaId, rectId)) {
+  const target = getObjectFromId(canvas, textareaId, rectId)
+  if (target && target.get('type') === 'group') {
     group = getObjectFromId(canvas, textareaId, rectId)
   } else {
+    if (target) {
+      canvas.remove(target)
+    }
     group = new fabric.Group([], {
       left: left,
       top: top,
@@ -714,9 +711,16 @@ function renderContent (canvas, textareaId, rectId, additional) {
 
   const text = textarea.getPreText()
   generateGridSystem(canvas, text, group, fontSize, textarea.css('font-family'), textarea.css('font-weight'), perTextAreaVerticalMode[i][j], textareaId, rectId)
+  getObjectFromId(canvas, textareaId, rectId).additionalRect = additional
   enableCanvasObjectInteraction(canvas, textareaId, rectId)
 
   $(textarea).hide()
+  group.set({ selectable: true })
+
+  // looks like they are dummy. But we have to.
+  activeBalloon = textareaId
+  activeRect = rectId
+  canvas.trigger('object:selected', { target: group })
   canvas.renderAll()
 }
 
@@ -776,9 +780,6 @@ function addBalloonMasks (canvas, data, computedScale) {
       // oImg.scale(0.5).setFlipX(true);
 
       loadCount += 1
-      $('#previewWrapper').css('filter', `blur(${5 - 5 * loadCount / data.balloonCount}px)`)
-      console.log($('#previewWrapper').css('filter'))
-
       oImg.set({
         opacity: 0.0,
         selectable: true,
@@ -800,6 +801,26 @@ function addBalloonMasks (canvas, data, computedScale) {
       canvas.add(oImg)
       enableCanvasObjectInteraction(canvas, i, -1)
       canvas.bringToFront(oImg)
+
+      if (loadCount === data.balloonCount) {
+        // when all are loaded
+        $('div.actions ul').click(function () {
+          $(this).parent().css('opacity', '0')
+        })
+        setTimeout(() => {
+          if (typeof (Event) === 'function') {
+            // modern browsers
+            window.dispatchEvent(new Event('resize'))
+          } else {
+            // for IE and other old browsers
+            // causes deprecation warning on modern browsers
+            var evt = window.document.createEvent('UIEvents')
+            evt.initUIEvent('resize', true, false, window, 0)
+            window.dispatchEvent(evt)
+          }
+          canvas.renderAll()
+        }, 400)
+      }
     }, {
       'left': data[i].boundingRect.x * computedScale,
       'top': data[i].boundingRect.y * computedScale,
@@ -814,10 +835,6 @@ function addBalloonMasks (canvas, data, computedScale) {
       hoverCursor: 'pointer'
     })
   }
-  $('div.actions ul').click(function () {
-    $(this).parent().css('opacity', '0')
-  })
-  canvas.renderAll()
 }
 
 function initializeBalloonChecker (canvas, width, height, originalImage, data) {
@@ -853,16 +870,9 @@ function initializeBalloonChecker (canvas, width, height, originalImage, data) {
     zoomTo(canvas, 1)
     canvas.discardActiveObject()
 
-    var height = $('.lower-canvas').attr('width')
-    var width = $('.lower-canvas').attr('height')
-
-    $('.lower-canvas').attr('width', $('.upper-canvas').attr('width'))
-    $('.lower-canvas').attr('height', $('.upper-canvas').attr('height'))
     canvas.renderAll()
 
     let d = document.getElementById('balloonChecker').toDataURL(data.type)
-    // console.log(data)
-    // console.log(data.type)
 
     var blob = dataURLtoBlob(d)
     var objurl = URL.createObjectURL(blob)
@@ -870,11 +880,6 @@ function initializeBalloonChecker (canvas, width, height, originalImage, data) {
     $('#saveImg')[0].href = objurl
     $('#saveImg')[0].download = 'e-' + data.fileName.substring(data.fileName.lastIndexOf('/') + 1)
     $('#saveImg')[0].click()
-
-    $('.lower-canvas').attr('width', width)
-    $('.lower-canvas').attr('height', height)
-
-    $('#previewPanel').css('height', 'auto')
 
     zoomTo(canvas, originalScale)
   })
@@ -997,10 +1002,10 @@ function initializeBalloonChecker (canvas, width, height, originalImage, data) {
 
         $(document).on('mousedown', function (evt) {
           var $tgt = $(evt.target)
-          if (!$tgt.is('li,select,option') && !$tgt.is(`.balloon${i}.rect${j}`) && !$tgt.is('.writingArea div')) {
+          if (!$tgt.is('li,select,option,button,i') && !$tgt.is(`.balloon${i}.rect${j}`) && !$tgt.is('.writingArea div')) {
             editMode = false
             renderContent(canvas, i, j, true)
-
+            enableCanvasObjectInteraction(canvas, i, j)
             $(document).off('mousedown')
           }
         })
@@ -1029,8 +1034,6 @@ function initializeBalloonChecker (canvas, width, height, originalImage, data) {
     $(`.balloon${i}.rect${j}`).css('font-family', font)
     if (!editMode) {
       renderContent(canvas, i, j, false)
-      const target = getObjectFromId(canvas, i, j)
-      canvas.setActiveObject(target)
     }
   })
 
@@ -1050,8 +1053,6 @@ function initializeBalloonChecker (canvas, width, height, originalImage, data) {
     $(`.balloon${i}.rect${j}`).css('font-size', fontSize + 'px')
     if (!editMode) {
       renderContent(canvas, i, j, false)
-      const target = getObjectFromId(canvas, i, j)
-      canvas.setActiveObject(target)
     }
 
     timeoutId = setInterval(function () {
@@ -1066,8 +1067,6 @@ function initializeBalloonChecker (canvas, width, height, originalImage, data) {
       $(`.balloon${i}.rect${j}`).css('font-size', fontSize + 'px')
       if (!editMode) {
         renderContent(canvas, i, j, false)
-        const target = getObjectFromId(canvas, i, j)
-        canvas.setActiveObject(target)
       }
     }, 150)
   }).bind('mouseup mouseleave', function () {
@@ -1088,8 +1087,6 @@ function initializeBalloonChecker (canvas, width, height, originalImage, data) {
     $(`.balloon${i}.rect${j}`).css('font-size', fontSize + 'px')
     if (!editMode) {
       renderContent(canvas, i, j, false)
-      const target = getObjectFromId(canvas, i, j)
-      canvas.setActiveObject(target)
     }
 
     timeoutId = setInterval(function () {
@@ -1104,8 +1101,6 @@ function initializeBalloonChecker (canvas, width, height, originalImage, data) {
       $(`.balloon${i}.rect${j}`).css('font-size', fontSize + 'px')
       if (!editMode) {
         renderContent(canvas, i, j, false)
-        const target = getObjectFromId(canvas, i, j)
-        canvas.setActiveObject(target)
       }
     }, 150)
   }).bind('mouseup mouseleave', function () {
@@ -1123,8 +1118,6 @@ function initializeBalloonChecker (canvas, width, height, originalImage, data) {
     }
     if (!editMode) {
       renderContent(canvas, i, j, false)
-      const target = getObjectFromId(canvas, i, j)
-      canvas.setActiveObject(target)
     }
   })
 
@@ -1133,21 +1126,33 @@ function initializeBalloonChecker (canvas, width, height, originalImage, data) {
       ev.preventDefault()
       var i = activeBalloon
       var j = activeRect
-      var isVertical = perTextAreaVerticalMode[i][j]
       perTextAreaVerticalMode[i][j] = !perTextAreaVerticalMode[i][j]
+      var isVertical = perTextAreaVerticalMode[i][j]
 
       if (isVertical) {
-        $(`.balloon${i}.rect${j}`).removeClass('tb-rl')
-        $(`.balloon${i}.rect${j}`).addClass('lr-tb')
-      } else {
         $(`.balloon${i}.rect${j}`).removeClass('lr-tb')
         $(`.balloon${i}.rect${j}`).addClass('tb-rl')
+      } else {
+        $(`.balloon${i}.rect${j}`).removeClass('tb-rl')
+        $(`.balloon${i}.rect${j}`).addClass('lr-tb')
       }
 
+      const target = getObjectFromId(canvas, i, j)
+
       if (!editMode) {
-        renderContent(canvas, i, j, false)
-        const target = getObjectFromId(canvas, i, j)
-        canvas.setActiveObject(target)
+        if (isVertical) {
+          renderContent(canvas, i, j, target.additionalRect)
+          enableCanvasObjectInteraction(canvas, i, j)
+        } else {
+          renderContent(canvas, i, j, target.additionalRect)
+          canvas.remove(target)
+          enableCanvasObjectInteraction(canvas, i, j)
+        }
+        canvas.trigger('object:selected', { target: getObjectFromId(canvas, i, j) })
+        canvas.renderAll()
+      } else {
+        // currently we do nothing.
+        // keep cool.
       }
     }
   })
@@ -1157,38 +1162,46 @@ function initializeBalloonChecker (canvas, width, height, originalImage, data) {
       ev.preventDefault()
       const i = activeBalloon
       const j = activeRect
-      canvas.remove(getObjectFromId(canvas, i, j))
+      const target = getObjectFromId(canvas, i, j)
+      const additional = target.additionalRect
+      canvas.remove(target)
       canvas.remove(additionalTextareaMask[j])
       $(`.balloon${i}.rect${j}`).remove()
       for (let t = j + 1; t < balloonLUTSize[i]; t++) {
-        let target = getObjectFromId(canvas, i, t)
-        target.rectId = t - 1
-        additionalTextareaMask[t - 1] = additionalTextareaMask[t]
+        let obj = getObjectFromId(canvas, i, t)
+        obj.rectId = t - 1
+        if (additional) {
+          additionalTextareaMask[t - 1] = additionalTextareaMask[t]
+        }
         $(`.balloon${i}.rect${t}`).removeClass(`.rect${t}`).addClass(`rect${t - 1}`)
 
         // refresh each textarea
-        const top = target.top
-        const left = target.left
-        const width = target.width
-        const height = target.height
+        const top = obj.top
+        const left = obj.left
+        const width = obj.width
+        const height = obj.height
 
         $(`.balloon${i}.rect${t}`).css({
           'top': top + 'px',
           'left': left + 'px',
           'width': width + 'px',
           'height': height + 'px',
-          'opacity': 0.95,
+          'opacity': 1.0,
           'box-shadow': '0px 0px 2px 1px #66ccff'
         })
       }
       balloonLUTSize[i] -= 1
       console.log(balloonLUTSize[i])
-      if (balloonLUTSize[i] === 0) {
+      if (balloonLUTSize[i] === 0 && !additional) {
         const oImg = getObjectFromId(canvas, i, -1)
+        console.log(oImg, i, j)
         oImg.set({
-          opacity: 0.0
+          opacity: 0.0,
+          selectable: true,
+          hoverCursor: 'pointer'
         })
       }
+      canvas.discardActiveObject()
       canvas.renderAll()
     }
   })
@@ -1215,7 +1228,7 @@ function initializeBalloonChecker (canvas, width, height, originalImage, data) {
     canvas.sendToBack(oImg)
 
     // width -> screenwidth
-    let computedScale = (Math.trunc(parseInt($('#previewWrapper').css('width'))) - 1) / width
+    let computedScale = (Math.trunc(parseInt($('#previewWrapper').css('width'))) - 1) / (data.dim.cols)
     // console.log(computedScale)
     addBalloonMasks(canvas, data, computedScale)
     zoomTo(canvas, 1 / computedScale)
@@ -1235,6 +1248,7 @@ function initializeBalloonChecker (canvas, width, height, originalImage, data) {
     hasControls: false
   })
   canvas.renderAll()
+  // ps.update()
 }
 
 $(document).ready(function () {
@@ -1243,6 +1257,14 @@ $(document).ready(function () {
     custom: {
       families: ['Noto Sans SC:n4,n7', 'Noto Serif SC:n4,n7', 'Noto Sans TC:n4,n7', 'Noto Serif TC:n4,n7'],
       urls: ['style.css']
+    }
+  })
+
+  $(window).resize(function () {
+    if ($('.canvas-container').length) {
+      let computedScale = (Math.trunc(parseInt($('#previewWrapper').css('width'))) - 1) / (canvasBackground.width)
+      zoomTo(globalCanvas, 1 / computedScale)
+      // ps.update()
     }
   })
 
@@ -1255,13 +1277,6 @@ $(document).ready(function () {
 
   $('.navItem:first').css({
     'border-bottom': '1px solid #E34F00'
-  })
-
-  $(window).resize(function () {
-    if ($('.canvas-container').length) {
-      let computedScale = (Math.trunc(parseInt($('#previewWrapper').css('width'))) - 1) / (canvasBackground.width)
-      zoomTo(globalCanvas, 1 / computedScale)
-    }
   })
 
   function getCookie (name) {
@@ -1348,6 +1363,12 @@ $(document).ready(function () {
         renderOnAddRemove: false,
         preserveObjectStacking: true
       })
+
+      // now adding scrollbars
+      // ps = new PerfectScrollbar('.canvas-container', {
+      //  suppressScrollX: true
+      // })
+
       canvas.selection = false
       let ctx = canvas.getContext('2d')
       ctx.imageSmoothingEnabled = false
@@ -1362,6 +1383,8 @@ $(document).ready(function () {
     setTimeout(function () {
       $('#progress .bar').fadeOut()
     }, 1000)
+
+    $(window).trigger('resize')
   })
 
   $('div.actions').hide()
@@ -1375,7 +1398,6 @@ $(document).ready(function () {
   })
 
   // page scroll
-
 
   // dropbox styles
   $(document).bind('dragover', function (e) {
@@ -1477,7 +1499,7 @@ $('#translateAll').on('click', function () {
       $('#translateAllResults').on('click', function () {
         var t = $('#translateAllResults')[0]
         var currentLine = (t.value.substr(0, t.selectionStart).split('\n').length)
-        globalCanvas.setActiveObject(balloonMasks[data.orders[currentLine - 1]])
+        globalCanvas.trigger('object:selected', { target: balloonMasks[data.orders[currentLine - 1]] })
       })
 
       $('textarea#translateAllResults').fadeIn()
@@ -1608,6 +1630,7 @@ TODO:
 
 *Frontend*
 + Line-height for vertical texts.
++ Custom font-css (for advanced users?)
 + Mask half of the balloon when there is multiple rectangles.
 + Search for nearest neighbour to activate, but not in order.
 + Keyboard Shortcuts(CTRL+S/DEL)
