@@ -540,6 +540,8 @@ ul.darkroom-toolbar-actions li.darkroom-button-group:last-child {
     z-index: 10;
     position: absolute;
     background-color: #fff;
+    user-select: auto;
+    -moz-user-select: element;
 }
 
 div:focus {

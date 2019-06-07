@@ -408,11 +408,9 @@ function generateGridSystem (canvas, text, initialGroup, fontSize, fontFamily, f
       hasBorders: true,
       selectable: true,
       scaleX: 1,
-      scaleY: 1,
-      hoverCursor: 'pointer'
+      scaleY: 1
     })
     canvas.bringToFront(initialGroup)
-
   } else {
     let groups = new fabric.Textbox(text, {
       left: left,
@@ -424,7 +422,7 @@ function generateGridSystem (canvas, text, initialGroup, fontSize, fontFamily, f
       fontWeight: fontWeight,
       balloonId: textareaId,
       rectId: rectId,
-      hasControls: true,
+      hasControls: false,
       hasBorders: true,
       selectable: true,
       editable: false,
@@ -483,7 +481,7 @@ function enableCanvasObjectInteraction (canvas, textareaId, rectId) {
           const left = data.textRect[j].x * computedScale
           const width = data.textRect[j].width * computedScale
           const height = data.textRect[j].height * computedScale
-          const divTemplate = "<div class='tb-rl writingArea balloon" + i + ' rect' + j + "'contenteditable></div>"
+          const divTemplate = `<div class='tb-rl writingArea balloon${i} rect${j}' contenteditable='plaintext-only'></div>`
           $('div.canvas-container').append(divTemplate)
 
           var font = $('#canvasQuickEditor select option:selected').val()
@@ -624,8 +622,11 @@ function enableCanvasObjectInteraction (canvas, textareaId, rectId) {
           var $tgt = $(evt.target)
           if (!$tgt.is('li,select,option,button,i') && !$tgt.is(`.balloon${i}.rect${j}`) && !$tgt.is('.writingArea div')) {
             editMode = false
-            renderContent(canvas, i, j, false)
+            renderContent(canvas, i, j, target.additionalRect)
+            canvas.bringToFront(target)
+            target.set({ hoverCursor: 'pointer' })
             canvas.trigger('object:selected', { target: target })
+            canvas.renderAll()
             $(document).off('click')
           }
         })
@@ -662,7 +663,6 @@ function onObjectScaled (canvas, target) {
         scaleY: 1
       })
     }
-    // enableCanvasObjectInteraction(canvas, textareaId, rectId)
   } else {
     // if horizontal mode
     // should be somehow quite simple.
@@ -703,6 +703,7 @@ function renderContent (canvas, textareaId, rectId, additional) {
       rectId: rectId,
       additonalRect: additional
     })
+    console.log(group.additionalRect, additional)
     canvas.add(group)
   }
 
@@ -715,7 +716,10 @@ function renderContent (canvas, textareaId, rectId, additional) {
   enableCanvasObjectInteraction(canvas, textareaId, rectId)
 
   $(textarea).hide()
-  group.set({ selectable: true })
+  group.set({
+    selectable: true,
+    hoverCursor: 'pointer'
+  })
 
   // looks like they are dummy. But we have to.
   activeBalloon = textareaId
@@ -899,6 +903,10 @@ function initializeBalloonChecker (canvas, width, height, originalImage, data) {
     // add a mouse down trigger.
     var rect, isDown, origX, origY
 
+    canvas.on('mouse:down', addRectMouseDown)
+    canvas.on('mouse:move', addRectMouseMove)
+    canvas.on('mouse:up', addRectMouseUp)
+
     function addRectMouseDown (o) {
       isDown = true
       let pointer = canvas.getPointer(o.e)
@@ -968,57 +976,46 @@ function initializeBalloonChecker (canvas, width, height, originalImage, data) {
 
         var pointer = canvas.getPointer(o.e)
 
-        const top = rect.top
-        const left = rect.left
         const width = Math.abs(origX - pointer.x)
         const height = Math.abs(origY - pointer.y)
-        const divTemplate = "<div class='tb-rl writingArea balloon" + i + ' rect' + j + "'contenteditable></div>"
+        const divTemplate = `<div class='tb-rl writingArea balloon${i} rect${j}' contenteditable='plaintext-only'></div>`
         $('div.canvas-container').append(divTemplate)
-        $(`.balloon${i}.rect${j}`).css({
-          'top': top + 'px',
-          'left': left + 'px',
-          'width': width + 'px',
-          'height': height + 'px',
-          'min-height': height + 'px',
-          'box-shadow': '0px 0px 2px 1px #66ccff'
-        })
 
         var newRect2 = new fabric.Rect({
           left: rect.left,
           top: rect.top,
           fill: 'rgba(255,255,255,1.0)',
-          width: rect.width,
-          height: rect.height,
+          width: width,
+          height: height,
+          scaleX: 1,
+          scaleY: 1,
           selectable: false,
           hasControls: false
         })
         canvas.add(newRect2)
-        canvas.renderAll()
         additionalTextareaMask[j] = newRect2
+        canvas.remove(rect)
 
-        perTextAreaVerticalMode[i][j] = true
-
-        $(`.balloon${i}.rect${j}`).focus()
-
-        $(document).on('mousedown', function (evt) {
-          var $tgt = $(evt.target)
-          if (!$tgt.is('li,select,option,button,i') && !$tgt.is(`.balloon${i}.rect${j}`) && !$tgt.is('.writingArea div')) {
-            editMode = false
-            renderContent(canvas, i, j, true)
-            enableCanvasObjectInteraction(canvas, i, j)
-            $(document).off('mousedown')
-          }
+        $(`.balloon${i}.rect${j}`).css({
+          'top': newRect2.top + 'px',
+          'left': newRect2.left + 'px',
+          'width': newRect2.width + 'px',
+          'height': newRect2.height + 'px',
+          'min-height': newRect2.height + 'px',
+          'box-shadow': '0px 0px 2px 1px #66ccff'
         })
 
+        // now adding canvas texts
         balloonLUTSize[i] += 1
-        canvas.remove(rect)
+        perTextAreaVerticalMode[i][j] = true
+        renderContent(canvas, i, j, true)
+        // const target = getObjectFromId(canvas, i, j)
         canvas.renderAll()
+        setTimeout(() => {
+          canvas.trigger('mouse:dblclick', { target: getObjectFromId(canvas, i, j) })
+        }, 50)
       }
     }
-
-    canvas.on('mouse:down', addRectMouseDown)
-    canvas.on('mouse:move', addRectMouseMove)
-    canvas.on('mouse:up', addRectMouseUp)
   })
 
   // append quick editor
@@ -1506,6 +1503,10 @@ $('#translateAll').on('click', function () {
     }
   })
 })
+
+window.addEventListener('selectstart', function (event) {
+  event.stopPropagation()
+}, true)
 
 /* sweet tracking code */
 const analytics = Analytics({
