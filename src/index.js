@@ -7,6 +7,12 @@ import WebFont from 'webfontloader'
 import 'fabric'
 import Analytics from 'analytics'
 import googleAnalyticsPlugin from 'analytics-plugin-ga'
+import MobileDetect from 'mobile-detect'
+
+const md = new MobileDetect(window.navigator.userAgent)
+if (md.mobile()) {
+  location.href = './mobile/'
+}
 
 var SCALE_FACTOR = 1.2
 var canvasScale = 1
@@ -199,7 +205,6 @@ var globalFontSize = 20
 
 function getObjectFromId (canvas, balloonId, rectId) {
   const objects = canvas.getObjects()
-  // console.log("query:", objects)
   const len = objects.length
   let output = null
 
@@ -211,7 +216,6 @@ function getObjectFromId (canvas, balloonId, rectId) {
       }
     }
   }
-  // console.log(output)
   return output
 }
 
@@ -220,8 +224,6 @@ function generateGridSystem (canvas, text, initialGroup, fontSize, fontFamily, f
   const height = initialGroup.get('height') * initialGroup.get('scaleY')
   const top = initialGroup.get('top')
   const left = initialGroup.get('left')
-
-  console.log(type, top, left, width, height, initialGroup.scaleX, initialGroup.scaleY, fontFamily, fontSize)
 
   if (type === true) {
     var rows = Math.floor((height + 1) / fontSize)
@@ -406,35 +408,57 @@ function generateGridSystem (canvas, text, initialGroup, fontSize, fontFamily, f
       height: height,
       hasControls: true,
       hasBorders: true,
+      balloonId: textareaId,
+      rectId: rectId,
       selectable: true,
       scaleX: 1,
       scaleY: 1
     })
-    canvas.bringToFront(initialGroup)
   } else {
-    let groups = new fabric.Textbox(text, {
-      left: left,
-      top: top,
-      width: width,
-      height: height,
+    let textbox = new fabric.Textbox(text, {
       fontFamily: fontFamily,
       fontSize: fontSize,
       fontWeight: fontWeight,
-      balloonId: textareaId,
-      rectId: rectId,
-      hasControls: false,
-      hasBorders: true,
+      hasControls: true,
+      hasBorders: false,
       selectable: true,
       editable: false,
       scaleX: 1,
       scaleY: 1
     })
-    canvas.add(groups)
+
+    let toBeDeletedTexts = []
+    initialGroup.forEachObject((obj) => {
+      toBeDeletedTexts.push(obj)
+    })
+
+    for (let text of toBeDeletedTexts) {
+      initialGroup.remove(text)
+      canvas.remove(text)
+    }
+
+    initialGroup.add(textbox)
+    initialGroup.addWithUpdate()
+
+    initialGroup.set({
+      left: left,
+      top: top,
+      width: width,
+      height: height,
+      hasControls: true,
+      hasBorders: true,
+      balloonId: textareaId,
+      rectId: rectId,
+      selectable: true,
+      scaleX: 1,
+      scaleY: 1
+    })
   }
 }
 
 function enableCanvasObjectInteraction (canvas, textareaId, rectId) {
   const target = getObjectFromId(canvas, textareaId, rectId)
+  console.log("Enable", target)
 
   if (rectId === -1) {
     // we are working on a a mask
@@ -535,24 +559,11 @@ function enableCanvasObjectInteraction (canvas, textareaId, rectId) {
       })
       target.rescaleBinded = true
     }
-    if (target.additonalRect && !target.hasOwnProperty('movingBinded')) {
-      target.on('moving', function () {
-        const j = rectId
-        additionalTextareaMask[j].set({
-          left: target.get('left'),
-          top: target.get('top'),
-          width: target.get('width'),
-          height: target.get('height'),
-          scaleX: 1,
-          scaleY: 1
-        })
-      })
-      target.movingBinded = true
-    }
     if (!target.hasOwnProperty('selectBinded')) {
       target.on('selected', function () {
         activeBalloon = textareaId
         activeRect = rectId
+        console.log(activeBalloon, activeRect)
         $('#canvasQuickEditor-Delete').removeClass('disabled')
         $('#canvasQuickEditor-Rotate').removeClass('disabled')
         $('.canvasQuickEditor').css('display', 'inline-block')
@@ -560,7 +571,7 @@ function enableCanvasObjectInteraction (canvas, textareaId, rectId) {
         $('#testTranslation').removeClass('disabled')
         $('#originalText').val('')
         $('#translatedText').val('')
-        if (textareaId < fileDetails.balloonCount) {
+        if (!target.additionalRect) {
           $('img.listItemImage').attr('src', fileDetails[textareaId].originalURL)
         }
       })
@@ -569,6 +580,8 @@ function enableCanvasObjectInteraction (canvas, textareaId, rectId) {
 
     if (!target.hasOwnProperty('movingBinded')) {
       target.on('moving', function () {
+        activeBalloon = textareaId
+        activeRect = rectId
         const top = target.get('top')
         const left = target.get('left')
 
@@ -593,7 +606,7 @@ function enableCanvasObjectInteraction (canvas, textareaId, rectId) {
         activeBalloon = i
         activeRect = j
 
-        if (i < fileDetails.balloonCount) {
+        if (!target.additionalRect) {
           $('img.listItemImage').attr('src', fileDetails[i].originalURL)
           $('#testTranslation').removeClass('disabled')
           $('#originalText').val('')
@@ -623,7 +636,6 @@ function enableCanvasObjectInteraction (canvas, textareaId, rectId) {
           if (!$tgt.is('li,select,option,button,i') && !$tgt.is(`.balloon${i}.rect${j}`) && !$tgt.is('.writingArea div')) {
             editMode = false
             renderContent(canvas, i, j, target.additionalRect)
-            canvas.bringToFront(target)
             target.set({ hoverCursor: 'pointer' })
             canvas.trigger('object:selected', { target: target })
             canvas.renderAll()
@@ -646,28 +658,26 @@ function onObjectScaled (canvas, target) {
   activeBalloon = i
   activeRect = j
 
+  const obj = getObjectFromId(canvas, i, j)
+
+  const top = obj.get('top')
+  const left = obj.get('left')
+  const width = obj.get('width')
+  const height = obj.get('height')
+  const fontSize = parseInt($(`.balloon${i}.rect${j}`).css('font-size'), 10)
+  $(`.balloon${i}.rect${j}`).css({
+    'top': top + 'px',
+    'left': left + 'px',
+    'width': width + 'px',
+    'height': height + 'px',
+    'font-size': fontSize
+  })
+
   console.log(perTextAreaVerticalMode[i][j])
 
-  if (perTextAreaVerticalMode[i][j]) {
-    $('#originalText').val('')
-    $('#translatedText').val('')
-
-    renderContent(canvas, textareaId, rectId, target.additionalRect)
-    if (target.additonalRect) {
-      additionalTextareaMask[j].set({
-        left: target.get('left'),
-        top: target.get('top'),
-        width: target.get('width'),
-        height: target.get('height'),
-        scaleX: 1,
-        scaleY: 1
-      })
-    }
-  } else {
-    // if horizontal mode
-    // should be somehow quite simple.
-    // TODO
-  }
+  $('#originalText').val('')
+  $('#translatedText').val('')
+  renderContent(canvas, i, j, target.additionalRect)
   canvas.renderAll()
 }
 
@@ -678,41 +688,41 @@ function renderContent (canvas, textareaId, rectId, additional) {
   const height = parseFloat(textarea.css('height'))
   const left = parseFloat(textarea.css('left'))
   const top = parseFloat(textarea.css('top'))
-  // console.log("render:", left, top, width, height)
-
   var fontSize = parseFloat(textarea.css('font-size'))
 
   let group
   const target = getObjectFromId(canvas, textareaId, rectId)
+  console.log('render', target, perTextAreaVerticalMode[textareaId][rectId])
   if (target && target.get('type') === 'group') {
     group = getObjectFromId(canvas, textareaId, rectId)
   } else {
     if (target) {
       canvas.remove(target)
     }
+    // this group is a proxy to hold any content.
     group = new fabric.Group([], {
-      left: left,
       top: top,
       width: width,
+      left: left,
       height: height,
-      hasControls: true,
-      selectable: true,
-      originX: 'left',
-      originY: 'top',
+      additionalRect: additional,
       balloonId: textareaId,
       rectId: rectId,
-      additonalRect: additional
+      hasControls: true,
+      originX: 'left',
+      originY: 'top'
     })
-    console.log(group.additionalRect, additional)
     canvas.add(group)
   }
+  canvas.renderAll()
+}
 
   const i = textareaId
   const j = rectId
 
   const text = textarea.getPreText()
   generateGridSystem(canvas, text, group, fontSize, textarea.css('font-family'), textarea.css('font-weight'), perTextAreaVerticalMode[i][j], textareaId, rectId)
-  getObjectFromId(canvas, textareaId, rectId).additionalRect = additional
+  group = getObjectFromId(canvas, textareaId, rectId)
   enableCanvasObjectInteraction(canvas, textareaId, rectId)
 
   $(textarea).hide()
@@ -724,7 +734,7 @@ function renderContent (canvas, textareaId, rectId, additional) {
   // looks like they are dummy. But we have to.
   activeBalloon = textareaId
   activeRect = rectId
-  canvas.trigger('object:selected', { target: group })
+  canvas.setActiveObject(group)
   canvas.renderAll()
 }
 
@@ -960,8 +970,8 @@ function initializeBalloonChecker (canvas, width, height, originalImage, data) {
         canvas.off('mouse:move', addRectMouseMove)
         canvas.off('mouse:up', addRectMouseUp)
 
-        var i = data.balloonCount
-        var j = balloonLUTSize[i]
+        const i = data.balloonCount
+        const j = balloonLUTSize[i]
         editMode = true
 
         // currently 10 more manual rect supported.
@@ -990,7 +1000,9 @@ function initializeBalloonChecker (canvas, width, height, originalImage, data) {
           scaleX: 1,
           scaleY: 1,
           selectable: false,
-          hasControls: false
+          hasControls: false,
+          lockMovementX: true,
+          lockMovementY: true
         })
         canvas.add(newRect2)
         additionalTextareaMask[j] = newRect2
@@ -1009,11 +1021,22 @@ function initializeBalloonChecker (canvas, width, height, originalImage, data) {
         balloonLUTSize[i] += 1
         perTextAreaVerticalMode[i][j] = true
         renderContent(canvas, i, j, true)
-        // const target = getObjectFromId(canvas, i, j)
+        const target = getObjectFromId(canvas, i, j)
         canvas.renderAll()
         setTimeout(() => {
-          canvas.trigger('mouse:dblclick', { target: getObjectFromId(canvas, i, j) })
-        }, 50)
+          $(`.balloon${i}.rect${j}`).show()
+          $(`.balloon${i}.rect${j}`).focus()
+
+          $(document).on('click', function (evt) {
+            var $tgt = $(evt.target)
+            if (!$tgt.is('li,select,option,button,i') && !$tgt.is(`.balloon${i}.rect${j}`) && !$tgt.is('.writingArea div')) {
+              editMode = false
+              renderContent(canvas, i, j, true)
+              canvas.trigger('object:selected', { target: target })
+              $(document).off('click')
+            }
+          })
+        }, 20)
       }
     }
   })
@@ -1028,9 +1051,11 @@ function initializeBalloonChecker (canvas, width, height, originalImage, data) {
     var j = activeRect
     var font = $('#canvasQuickEditor-Font select option:selected').val()
     globalFont = font
+    const target = getObjectFromId(canvas, i, j)
+
     $(`.balloon${i}.rect${j}`).css('font-family', font)
     if (!editMode) {
-      renderContent(canvas, i, j, false)
+      renderContent(canvas, i, j, target.additionalRect)
     }
   })
 
@@ -1043,13 +1068,14 @@ function initializeBalloonChecker (canvas, width, height, originalImage, data) {
 
     var i = activeBalloon
     var j = activeRect
+    const target = getObjectFromId(canvas, i, j)
 
     var fontSize = parseInt($(`.balloon${i}.rect${j}`).css('font-size'), 10) + 1
     globalFontSize = fontSize
 
     $(`.balloon${i}.rect${j}`).css('font-size', fontSize + 'px')
     if (!editMode) {
-      renderContent(canvas, i, j, false)
+      renderContent(canvas, i, j, target.additionalRect)
     }
 
     timeoutId = setInterval(function () {
@@ -1057,13 +1083,14 @@ function initializeBalloonChecker (canvas, width, height, originalImage, data) {
 
       var i = activeBalloon
       var j = activeRect
+      const target = getObjectFromId(canvas, i, j)
 
       var fontSize = parseInt($(`.balloon${i}.rect${j}`).css('font-size'), 10) + 1
       globalFontSize = fontSize
 
       $(`.balloon${i}.rect${j}`).css('font-size', fontSize + 'px')
       if (!editMode) {
-        renderContent(canvas, i, j, false)
+        renderContent(canvas, i, j, target.additionalRect)
       }
     }, 150)
   }).bind('mouseup mouseleave', function () {
@@ -1077,13 +1104,14 @@ function initializeBalloonChecker (canvas, width, height, originalImage, data) {
 
     const i = activeBalloon
     const j = activeRect
+    const target = getObjectFromId(canvas, i, j)
 
     var fontSize = parseInt($(`.balloon${i}.rect${j}`).css('font-size'), 10) - 1
     globalFontSize = fontSize
 
     $(`.balloon${i}.rect${j}`).css('font-size', fontSize + 'px')
     if (!editMode) {
-      renderContent(canvas, i, j, false)
+      renderContent(canvas, i, j, target.additionalRect)
     }
 
     timeoutId = setInterval(function () {
@@ -1097,7 +1125,7 @@ function initializeBalloonChecker (canvas, width, height, originalImage, data) {
 
       $(`.balloon${i}.rect${j}`).css('font-size', fontSize + 'px')
       if (!editMode) {
-        renderContent(canvas, i, j, false)
+        renderContent(canvas, i, j, target.additionalRect)
       }
     }, 150)
   }).bind('mouseup mouseleave', function () {
@@ -1107,6 +1135,8 @@ function initializeBalloonChecker (canvas, width, height, originalImage, data) {
   $('#canvasQuickEditor-Bold').mousedown(function () {
     var i = activeBalloon
     var j = activeRect
+    const target = getObjectFromId(canvas, i, j)
+
     var isBold = $(`.balloon${i}.rect${j}`).css('font-weight')
     if (isBold === 'bold' || isBold === '700' || parseInt(isBold, 10) === 700) {
       $(`.balloon${i}.rect${j}`).css('font-weight', 'normal')
@@ -1114,7 +1144,7 @@ function initializeBalloonChecker (canvas, width, height, originalImage, data) {
       $(`.balloon${i}.rect${j}`).css('font-weight', 'bold')
     }
     if (!editMode) {
-      renderContent(canvas, i, j, false)
+      renderContent(canvas, i, j, target.additionalRect)
     }
   })
 
@@ -1135,18 +1165,10 @@ function initializeBalloonChecker (canvas, width, height, originalImage, data) {
       }
 
       const target = getObjectFromId(canvas, i, j)
-
+      const additional = target.additionalRect
+      canvas.remove(target)
       if (!editMode) {
-        if (isVertical) {
-          renderContent(canvas, i, j, target.additionalRect)
-          enableCanvasObjectInteraction(canvas, i, j)
-        } else {
-          renderContent(canvas, i, j, target.additionalRect)
-          canvas.remove(target)
-          enableCanvasObjectInteraction(canvas, i, j)
-        }
-        canvas.trigger('object:selected', { target: getObjectFromId(canvas, i, j) })
-        canvas.renderAll()
+        renderContent(canvas, i, j, additional)
       } else {
         // currently we do nothing.
         // keep cool.
@@ -1160,9 +1182,12 @@ function initializeBalloonChecker (canvas, width, height, originalImage, data) {
       const i = activeBalloon
       const j = activeRect
       const target = getObjectFromId(canvas, i, j)
+      console.log(target)
       const additional = target.additionalRect
-      canvas.remove(target)
-      canvas.remove(additionalTextareaMask[j])
+
+      if (additional) {
+        canvas.remove(additionalTextareaMask[j])
+      }
       $(`.balloon${i}.rect${j}`).remove()
       for (let t = j + 1; t < balloonLUTSize[i]; t++) {
         let obj = getObjectFromId(canvas, i, t)
@@ -1188,7 +1213,7 @@ function initializeBalloonChecker (canvas, width, height, originalImage, data) {
         })
       }
       balloonLUTSize[i] -= 1
-      console.log(balloonLUTSize[i])
+      console.log(balloonLUTSize[i], additional, i, j)
       if (balloonLUTSize[i] === 0 && !additional) {
         const oImg = getObjectFromId(canvas, i, -1)
         console.log(oImg, i, j)
@@ -1198,6 +1223,7 @@ function initializeBalloonChecker (canvas, width, height, originalImage, data) {
           hoverCursor: 'pointer'
         })
       }
+      canvas.remove(target)
       canvas.discardActiveObject()
       canvas.renderAll()
     }
@@ -1309,7 +1335,7 @@ $(document).ready(function () {
   // new type of file upload handler.
 
   $('#fileupload').fileupload({
-    url: '/mangaEditor/upload/',
+    url: 'https://moeka.me/mangaEditor/upload/',
     sequentialUploads: true,
     type: 'POST',
     error: function (e, data) {

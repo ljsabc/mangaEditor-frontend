@@ -1,18 +1,12 @@
-const merge = require('webpack-merge')
-const common = require('./webpack.common.js')
-const TerserPlugin = require('terser-webpack-plugin')
-<<<<<<< HEAD
+const path = require('path')
+const glob = require('glob')
+const webpack = require('webpack')
 const { CleanWebpackPlugin } = require('clean-webpack-plugin')
 const MiniCssExtractPlugin = require('mini-css-extract-plugin')
 const OptimizeCSSAssetsPlugin = require('optimize-css-assets-webpack-plugin')
 const FixStyleOnlyEntriesPlugin = require('webpack-fix-style-only-entries')
 
-=======
->>>>>>> Reworked on horizontal textboxes. Add config for local testing.
-
-module.exports = merge(common, {
-  mode: 'production',
-<<<<<<< HEAD
+module.exports = {
   target: 'web',
   // entry为入口,webpack从这里开始编译
   entry: {
@@ -30,8 +24,8 @@ module.exports = merge(common, {
     'web': path.resolve(__dirname, 'index.html')
   },
   output: {
-    filename: '[name].js', 
-    path: path.resolve(__dirname, 'build/'),
+    filename: '[name].js',
+    path: path.resolve(__dirname, 'build/')
   },
   module: {
     rules: [{
@@ -76,7 +70,7 @@ module.exports = merge(common, {
       filename: '[name].css'
     }),
     new FixStyleOnlyEntriesPlugin({
-      extensions:['css', 'html']
+      extensions: ['css', 'html']
     }),
     new OptimizeCSSAssetsPlugin({
       assetNameRegExp: /.css$/,
@@ -89,24 +83,5 @@ module.exports = merge(common, {
     }),
     new CleanWebpackPlugin({
     })
-  ],
-
-=======
->>>>>>> Reworked on horizontal textboxes. Add config for local testing.
-  optimization: {
-    minimize: true,
-    minimizer: [new TerserPlugin({
-      test: /\.js$/,
-      exclude: /node_modules/,
-      parallel: true,
-      terserOptions: {
-        mangle: true,
-        parallel: true,
-        extractComments: 'all',
-        compress: {
-          drop_console: true
-        }
-      }
-    })]
-  }
-})
+  ]
+}
