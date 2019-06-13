@@ -715,7 +715,6 @@ function renderContent (canvas, textareaId, rectId, additional) {
     canvas.add(group)
   }
   canvas.renderAll()
-}
 
   const i = textareaId
   const j = rectId
