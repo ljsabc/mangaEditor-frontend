@@ -1,6 +1,6 @@
 {
   "name": "mangaeditor",
-  "version": "1.3.1",
+  "version": "1.4.2",
   "description": "The Mangaeditor Frontend",
   "main": "index.js",
   "scripts": {
@@ -34,13 +34,9 @@
     "uglifyjs-webpack-plugin": "^2.1.3",
     "webpack": "^4.32.2",
     "webpack-cli": "^3.3.2",
-<<<<<<< HEAD
-    "webpack-fix-style-only-entries": "^0.3.0"
-=======
     "webpack-dev-server": "^3.7.1",
     "webpack-fix-style-only-entries": "^0.3.0",
     "webpack-merge": "^4.2.1"
->>>>>>> Reworked on horizontal textboxes. Add config for local testing.
   },
   "dependencies": {
     "@babel/polyfill": "^7.4.4",
@@ -52,10 +48,7 @@
     "fabric": "^2.4.3",
     "jquery": "^3.4.1",
     "jquery-ui": "^1.12.1",
-<<<<<<< HEAD
-=======
     "mobile-detect": "^1.4.3",
->>>>>>> Reworked on horizontal textboxes. Add config for local testing.
     "webfontloader": "^1.6.28"
   }
 }
