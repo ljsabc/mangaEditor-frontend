@@ -3,7 +3,7 @@ import $ from 'jquery'
 import 'jquery-ui'
 import 'blueimp-file-upload'
 import 'bootstrap3'
-import WebFont from 'webfontloader'
+import FontFaceObserver from 'fontfaceobserver'
 import 'fabric'
 import Analytics from 'analytics'
 import googleAnalyticsPlugin from 'analytics-plugin-ga'
@@ -458,7 +458,7 @@ function generateGridSystem (canvas, text, initialGroup, fontSize, fontFamily, f
 
 function enableCanvasObjectInteraction (canvas, textareaId, rectId) {
   const target = getObjectFromId(canvas, textareaId, rectId)
-  console.log("Enable", target)
+  // console.log('Enable', target)
 
   if (rectId === -1) {
     // we are working on a a mask
@@ -563,7 +563,7 @@ function enableCanvasObjectInteraction (canvas, textareaId, rectId) {
       target.on('selected', function () {
         activeBalloon = textareaId
         activeRect = rectId
-        console.log(activeBalloon, activeRect)
+        // console.log(activeBalloon, activeRect)
         $('#canvasQuickEditor-Delete').removeClass('disabled')
         $('#canvasQuickEditor-Rotate').removeClass('disabled')
         $('.canvasQuickEditor').css('display', 'inline-block')
@@ -673,7 +673,7 @@ function onObjectScaled (canvas, target) {
     'font-size': fontSize
   })
 
-  console.log(perTextAreaVerticalMode[i][j])
+  // console.log(perTextAreaVerticalMode[i][j])
 
   $('#originalText').val('')
   $('#translatedText').val('')
@@ -692,7 +692,7 @@ function renderContent (canvas, textareaId, rectId, additional) {
 
   let group
   const target = getObjectFromId(canvas, textareaId, rectId)
-  console.log('render', target, perTextAreaVerticalMode[textareaId][rectId])
+  // console.log('render', target, perTextAreaVerticalMode[textareaId][rectId])
   if (target && target.get('type') === 'group') {
     group = getObjectFromId(canvas, textareaId, rectId)
   } else {
@@ -1045,17 +1045,32 @@ function initializeBalloonChecker (canvas, width, height, originalImage, data) {
   $('.darkroom-toolbar button').click(function (ev) {
     ev.preventDefault()
   })
-  $('#canvasQuickEditor-Font select').change(function () {
+  $('#canvasQuickEditor-Font select').change(function (ev) {
     var i = activeBalloon
     var j = activeRect
-    var font = $('#canvasQuickEditor-Font select option:selected').val()
-    globalFont = font
-    const target = getObjectFromId(canvas, i, j)
-
-    $(`.balloon${i}.rect${j}`).css('font-family', font)
-    if (!editMode) {
-      renderContent(canvas, i, j, target.additionalRect)
+    var fonts = $('#canvasQuickEditor-Font select option:selected').val().split(',')
+    var observers = []
+    for (let font of fonts) {
+      const fontObs = new FontFaceObserver(font)
+      observers.push(fontObs)
     }
+    console.log(observers)
+
+    const text = $('#canvasQuickEditor-Font select option:selected').text()
+    $('#canvasQuickEditor-Font select option:selected').text('Loading...')
+
+    async function loadFon (observers) { await Promise.all(observers.map(font => font.load())) }
+    $.when(async () => { await loadFon(observers) }).then(() => {
+      console.log('then')
+      globalFont = $('#canvasQuickEditor-Font select option:selected').val()
+      const target = getObjectFromId(canvas, i, j)
+
+      $(`.balloon${i}.rect${j}`).css('font-family', $('#canvasQuickEditor-Font select option:selected').val())
+      if (!editMode) {
+        renderContent(canvas, i, j, target.additionalRect)
+      }
+      $('#canvasQuickEditor-Font select option:selected').text(text)
+    })
   })
 
   var timeoutId = 0
@@ -1181,7 +1196,7 @@ function initializeBalloonChecker (canvas, width, height, originalImage, data) {
       const i = activeBalloon
       const j = activeRect
       const target = getObjectFromId(canvas, i, j)
-      console.log(target)
+      // console.log(target)
       const additional = target.additionalRect
 
       if (additional) {
@@ -1212,7 +1227,7 @@ function initializeBalloonChecker (canvas, width, height, originalImage, data) {
         })
       }
       balloonLUTSize[i] -= 1
-      console.log(balloonLUTSize[i], additional, i, j)
+      // console.log(balloonLUTSize[i], additional, i, j)
       if (balloonLUTSize[i] === 0 && !additional) {
         const oImg = getObjectFromId(canvas, i, -1)
         console.log(oImg, i, j)
@@ -1275,11 +1290,10 @@ function initializeBalloonChecker (canvas, width, height, originalImage, data) {
 
 $(document).ready(function () {
   // process web fonts
-  WebFont.load({
-    custom: {
-      families: ['Noto Sans SC:n4,n7', 'Noto Serif SC:n4,n7', 'Noto Sans TC:n4,n7', 'Noto Serif TC:n4,n7'],
-      urls: ['style.css']
-    }
+  const NotoSansSC = new FontFaceObserver('Noto Sans SC')
+  const NotoSerifSC = new FontFaceObserver('Noto Serif SC')
+  Promise.all([NotoSansSC.load(), NotoSerifSC.load()]).then(function () {
+    console.log('Init font loaded')
   })
 
   $(window).resize(function () {
@@ -1349,8 +1363,8 @@ $(document).ready(function () {
   })
 
   var imgArr = [
-    'img/intro-1.png',
-    'img/intro-2.png'
+    '//mangaedt-bkt.oss-cn-shenzhen.aliyuncs.com/img/intro-1.png',
+    '//mangaedt-bkt.oss-cn-shenzhen.aliyuncs.com/img/intro-2.png'
   ]
 
   var preloadArr = []
