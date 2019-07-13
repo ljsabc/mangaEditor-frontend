@@ -1059,7 +1059,7 @@ function initializeBalloonChecker (canvas, width, height, originalImage, data) {
     const text = $('#canvasQuickEditor-Font select option:selected').text()
     $('#canvasQuickEditor-Font select option:selected').text('Loading...')
 
-    async function loadFon (observers) { await Promise.all(observers.map(font => font.load())) }
+    async function loadFon (observers) { await Promise.all(observers.map(font => font.load(null, 15000))) }
     $.when(async () => { await loadFon(observers) }).then(() => {
       console.log('then')
       globalFont = $('#canvasQuickEditor-Font select option:selected').val()
@@ -1292,7 +1292,7 @@ $(document).ready(function () {
   // process web fonts
   const NotoSansSC = new FontFaceObserver('Noto Sans SC')
   const NotoSerifSC = new FontFaceObserver('Noto Serif SC')
-  Promise.all([NotoSansSC.load(), NotoSerifSC.load()]).then(function () {
+  Promise.all([NotoSansSC.load(null, 15000), NotoSerifSC.load(null, 15000)]).then(function () {
     console.log('Init font loaded')
   })
 
