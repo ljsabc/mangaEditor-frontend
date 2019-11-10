@@ -852,6 +852,10 @@ function addBalloonMasks (canvas, data, computedScale) {
 
 function initializeBalloonChecker (canvas, width, height, originalImage, data) {
   // preload balloon images
+  //
+  if (!fileDetails.balloonCount){
+    alert("没有检测到气泡，请手动处理");
+  }
   var preload = []
   for (var i = 0; i < fileDetails.balloonCount; i++) {
     preload[i] = new Image()
