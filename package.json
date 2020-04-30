@@ -47,7 +47,7 @@
     "bowser": "^1.9.4",
     "fabric": "^2.4.3",
     "fontfaceobserver": "^2.1.0",
-    "jquery": "^3.4.1",
+    "jquery": "^3.5.0",
     "jquery-ui": "^1.12.1",
     "mobile-detect": "^1.4.3"
   }
