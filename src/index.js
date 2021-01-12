@@ -367,7 +367,7 @@ function generateGridSystem (canvas, text, initialGroup, fontSize, fontFamily, f
       texts.push(newText)
     }
 
-    for (let j = 0; j < 7; j++) {
+    /*for (let j = 0; j < 7; j++) {
       let newText = new fabric.Text('\u3000', {
         left: 0,
         top: fontSize,
@@ -382,39 +382,40 @@ function generateGridSystem (canvas, text, initialGroup, fontSize, fontFamily, f
         lockScalingY: true
       })
       texts.push(newText)
-    }
+    }*/
 
     let toBeDeletedTexts = []
     initialGroup.forEachObject((obj) => {
       toBeDeletedTexts.push(obj)
     })
 
-    for (let text of texts) {
-      // text.on('scaling', x => x.set({ scaleX: 1, scaleY: 1 }))
-      initialGroup.add(text)
-    }
-
     for (let text of toBeDeletedTexts) {
       initialGroup.remove(text)
       canvas.remove(text)
     }
 
-    initialGroup.addWithUpdate()
+    for (let text of texts) {
+      // text.on('scaling', x => x.set({ scaleX: 1, scaleY: 1 }))
+      initialGroup.add(text)
+    }
 
-    initialGroup.set({
-      left: left,
-      top: top,
-      width: width,
-      height: height,
-      hasControls: true,
-      hasBorders: true,
-      balloonId: textareaId,
-      rectId: rectId,
-      selectable: true,
+    initialGroup.addWithUpdate()
+  } else {
+    let textHint = new fabric.Textbox("\u3000", {
+      fontFamily: fontFamily,
+      fontSize: 12,
+      fontWeight: fontWeight,
+      hasControls: false,
+      hasBorders: false,
+      selectable: false,
+      editable: false,
+      lineHeight: 1.1,
+      top: 0,
+      left: 0,
       scaleX: 1,
       scaleY: 1
     })
-  } else {
+
     let textbox = new fabric.Textbox(text, {
       fontFamily: fontFamily,
       fontSize: fontSize,
@@ -423,6 +424,10 @@ function generateGridSystem (canvas, text, initialGroup, fontSize, fontFamily, f
       hasBorders: false,
       selectable: true,
       editable: false,
+      width: width,
+      lineHeight: 1.1,
+      top: -initialGroup.height,
+      left: 0,
       scaleX: 1,
       scaleY: 1
     })
@@ -437,28 +442,36 @@ function generateGridSystem (canvas, text, initialGroup, fontSize, fontFamily, f
       canvas.remove(text)
     }
 
+    initialGroup.add(textHint)
     initialGroup.add(textbox)
     initialGroup.addWithUpdate()
 
-    initialGroup.set({
-      left: left,
-      top: top,
-      width: width,
-      height: height,
-      hasControls: true,
-      hasBorders: true,
-      balloonId: textareaId,
-      rectId: rectId,
-      selectable: true,
-      scaleX: 1,
-      scaleY: 1
-    })
+    //console.log(initialGroup.toJSON())
   }
+  initialGroup.set({
+    left: left,
+    top: top,
+    width: width,
+    height: height,
+    hasControls: true,
+    hasBorders: true,
+    balloonId: textareaId,
+    rectId: rectId,
+    selectable: true,
+    scaleX: 1,
+    scaleY: 1,
+    hoverCursor: 'pointer'
+  })
+  initialGroup.setCoords()
+  canvas.setActiveObject(initialGroup)
+  //initialGroup.addWithUpdate()
 }
 
 function enableCanvasObjectInteraction (canvas, textareaId, rectId) {
   const target = getObjectFromId(canvas, textareaId, rectId)
-  // console.log('Enable', target)
+  /*console.log('Check:', rectId, target.hasOwnProperty('selectBinded'),
+    target.hasOwnProperty('rescaleBinded'),
+    target.hasOwnProperty('dblClickBinded'))*/
 
   if (rectId === -1) {
     // we are working on a a mask
@@ -533,7 +546,7 @@ function enableCanvasObjectInteraction (canvas, textareaId, rectId) {
             if (!$tgt.is('li,select,option,button,i') && !$tgt.is(`.balloon${i}.rect${j}`) && !$tgt.is('.writingArea div')) {
               editMode = false
               renderContent(canvas, i, j, false)
-              canvas.trigger('object:selected', { target: target })
+              // canvas.trigger('object:selected', { target: target })
               $(document).off('click')
             }
           })
@@ -554,13 +567,16 @@ function enableCanvasObjectInteraction (canvas, textareaId, rectId) {
     }
   } else {
     if (!target.hasOwnProperty('rescaleBinded')) {
+      // place this first, otherwise this will give a recursion.
+      target.set({ rescaleBinded: true })
+
       target.on('scaling', function () {
         onObjectScaled(canvas, target)
       })
-      target.rescaleBinded = true
     }
     if (!target.hasOwnProperty('selectBinded')) {
       target.on('selected', function () {
+        target.set({ selectBinded: true })
         activeBalloon = textareaId
         activeRect = rectId
         // console.log(activeBalloon, activeRect)
@@ -575,10 +591,10 @@ function enableCanvasObjectInteraction (canvas, textareaId, rectId) {
           $('img.listItemImage').attr('src', fileDetails[textareaId].originalURL)
         }
       })
-      target.set({ selectBinded: true })
     }
 
     if (!target.hasOwnProperty('movingBinded')) {
+      target.set({ movingBinded: true })
       target.on('moving', function () {
         activeBalloon = textareaId
         activeRect = rectId
@@ -590,9 +606,10 @@ function enableCanvasObjectInteraction (canvas, textareaId, rectId) {
           'left': left + 'px'
         })
       })
-      target.set({ movingBinded: true })
     }
-    if (!target.hasOwnProperty('dblselectBinded')) {
+    if (!target.hasOwnProperty('dblClickBinded')) {
+      target.set({ dblClickBinded: true })
+
       target.on('mousedblclick', function () {
         editMode = true
 
@@ -632,17 +649,17 @@ function enableCanvasObjectInteraction (canvas, textareaId, rectId) {
         $(`.balloon${i}.rect${j}`).show()
         $(`.balloon${i}.rect${j}`).focus()
         $(document).on('click', function (evt) {
+          // console.log('clicked')
           var $tgt = $(evt.target)
           if (!$tgt.is('li,select,option,button,i') && !$tgt.is(`.balloon${i}.rect${j}`) && !$tgt.is('.writingArea div')) {
             editMode = false
             renderContent(canvas, i, j, target.additionalRect)
             target.set({ hoverCursor: 'pointer' })
-            canvas.trigger('object:selected', { target: target })
+            //canvas.trigger('object:selected', { target: target })
             canvas.renderAll()
             $(document).off('click')
           }
         })
-        target.set({ dblselectBinded: true })
       })
     }
   }
@@ -714,7 +731,6 @@ function renderContent (canvas, textareaId, rectId, additional) {
     })
     canvas.add(group)
   }
-  canvas.renderAll()
 
   const i = textareaId
   const j = rectId
@@ -725,15 +741,11 @@ function renderContent (canvas, textareaId, rectId, additional) {
   enableCanvasObjectInteraction(canvas, textareaId, rectId)
 
   $(textarea).hide()
-  group.set({
-    selectable: true,
-    hoverCursor: 'pointer'
-  })
 
   // looks like they are dummy. But we have to.
   activeBalloon = textareaId
   activeRect = rectId
-  canvas.setActiveObject(group)
+  //canvas.setActiveObject(group)
   canvas.renderAll()
 }
 
@@ -747,7 +759,6 @@ function zoomTo (canvas, scale) {
   canvas.setWidth(canvas.get('width') * (1 / SCALE_FACTOR))
 
   var objects = canvas.getObjects()
-  // console.log(objects);
   for (var i in objects) {
     var scaleX = objects[i].scaleX
     var scaleY = objects[i].scaleY
@@ -853,8 +864,8 @@ function addBalloonMasks (canvas, data, computedScale) {
 function initializeBalloonChecker (canvas, width, height, originalImage, data) {
   // preload balloon images
   //
-  if (!fileDetails.balloonCount){
-    alert("没有检测到气泡，请手动处理");
+  if (!fileDetails.balloonCount) {
+    alert('没有检测到气泡，请手动处理')
   }
   var preload = []
   for (var i = 0; i < fileDetails.balloonCount; i++) {
@@ -884,7 +895,7 @@ function initializeBalloonChecker (canvas, width, height, originalImage, data) {
     ev.preventDefault()
     // open result in new windows.
     var originalScale = canvasScale
-    zoomTo(canvas, 1)
+    zoomTo(canvas, 1 * window.devicePixelRatio)
     canvas.discardActiveObject()
 
     canvas.renderAll()
@@ -1035,7 +1046,7 @@ function initializeBalloonChecker (canvas, width, height, originalImage, data) {
             if (!$tgt.is('li,select,option,button,i') && !$tgt.is(`.balloon${i}.rect${j}`) && !$tgt.is('.writingArea div')) {
               editMode = false
               renderContent(canvas, i, j, true)
-              canvas.trigger('object:selected', { target: target })
+              //canvas.trigger('object:selected', { target: target })
               $(document).off('click')
             }
           })

@@ -1,3 +1,4 @@
+
 <!doctype html>
 <html lang="zh-cn">
 
@@ -38,6 +39,7 @@
                   <option value='"方正卡通简体"'>方正卡通简体</option>
                   <option value='"方正正黑简体"'>方正正黑简体</option>
                   <option value='"Hiragino Sans GB"'>Hiragino Sans GB</option>
+                  <option value='Comic Sans MS'>Comic Sans MS</option>
                   <option disabled>思源以外的字体请确保安装</option>
                 </select>
               </li>
@@ -58,7 +60,6 @@
             </div>
           </div>
           <div id="dropAd">
-            <script async src="//pagead2.googlesyndication.com/pagead/js/adsbygoogle.js"></script>
             <!-- mangaeditor-LL -->
             <ins class="adsbygoogle sqad" style="width: 100%; height:auto; display:block; margin: 0 auto;"
               data-ad-client="ca-pub-2633684480410686" data-ad-slot="2637397436"
@@ -126,25 +127,21 @@
 
             </div>
 
+
+	    <!-- mangaEditor-Main -->
+		<ins class="adsbygoogle"
+     style="display:inline-block;width:480px;height:100px;text-align:center"
+     data-ad-client="ca-pub-2633684480410686"
+     data-ad-slot="6809680421"></ins>
+
             <div class="balloonList" id="balloonEditorMainframeList">
-              
-              <p><span style="color:red">这是一次大版本升级，大幅增加了流畅性和兼容性。目前已知的bug已经解决，接下来半个月将会逐渐引入一些新功能，不会影响现在的用户体验。</span><br/>如有问题和反馈请发送到ljsabc@gmail.com。</p>
+              <p><a href="https://github.com/ljsabc/mangaEditor-frontend">点击这里获得支持/反馈问题 (Changelogs and feedbacks)</a></p>
                 <ol>
                   <li>在上传之前请尽量保证图源，不要上传灰度太大的图，否则有可能会把服务器跑挂。服务器超时5分钟，如果5分钟还没有结果就不行了。</li>
-                  <li>另外请尽量不用使用某些批量工具，因为无法保证结果质量的同时，还会浪费服务器资源和一些钱。</li>
+                  <li>请尽量不用使用某些批量工具，因为无法保证结果质量。</li>
                   <li>OCR的请求实在是太贵了。如果你对某个广告有兴趣欢迎点击来支持本站。</li>
                 </ol>
             </div>
-          </div>
-        </div>
-
-        <div class="row">
-          <div class="col-lg-12">
-            <p style="font-size:12px;height:0.5em;"></p>
-            <!-- mangaEditor-Main -->
-            <ins class="adsbygoogle" style="display:block" data-ad-client="ca-pub-2633684480410686"
-              data-ad-slot="6809680421" data-ad-format="auto" data-full-width-responsive="true" title="穷是这样的啊"></ins>
-            <p style="font-size:12px;height:0.5em;"></p>
           </div>
         </div>
 
@@ -155,7 +152,7 @@
             <span class="btn btn-primary" style="display:none"><i class="fa fa-gear"></i> <a id="saveImg"
                 download="download.jpg">保存图片</a> </span>
             <span class="btn btn-success"><i class="fa fa-share"></i>分享本站</span>
-            <a class="btn btn-warning" href="http://www.dashangcloud.com/sh/87a3ae" target="_blank">打赏本站</a>
+	    <!-- <a class="btn btn-warning" href="http://www.dashangcloud.com/sh/87a3ae" target="_blank">打赏本站</a> -->
             <a href="v2" class="btn btn-default">新版编辑器</a>
           </div>
           <br />
@@ -195,15 +192,13 @@
 
   <script src="index.js"></script>
 
-  <script async src="//pagead2.googlesyndication.com/pagead/js/adsbygoogle.js"></script>
-  <script type="text/javascript">
-    document.onreadystatechange = function () {
-      if (document.readyState == "interactive") {
-        // Initialize your application or run some code.
-        (adsbygoogle = window.adsbygoogle || []).push({});
-      }
-    }
-  </script>
+  <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js"></script>
+	<script>
+		[].forEach.call(document.querySelectorAll('.adsbygoogle'), function(){
+			    (adsbygoogle = window.adsbygoogle || []).push({});
+		});
+	</script>
+
 </body>
 
 </html>
