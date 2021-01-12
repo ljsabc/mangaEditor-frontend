@@ -1,7 +1,7 @@
 MangaEditor Classic
 ----
 
-This is the frontend code of the classic version of [mangaEditor]. For the v2 version of code, please refer to [v2].
+This is the frontend code of the classic version of [mangaEditor](https://moeka.me/mangaEditor). For the v2 version of code, please refer to [The mangaEditor v2 Project](https://github.com/OrcaXS/mangaEditor).
 
 #### How to build
 
@@ -33,6 +33,3 @@ If you are not familar with github, please email to:
     ljsabc <at> gmail.com
 
 如果你不熟悉使用github，请发邮件到上面的地址。
-
-[mangaEditor] https://moeka.me/mangaEditor
-[v2] https://github.com/OrcaXS/mangaEditor
