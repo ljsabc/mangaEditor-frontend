@@ -1303,6 +1303,22 @@ function initializeBalloonChecker (canvas, width, height, originalImage, data) {
   // ps.update()
 }
 
+function setlang (lang) {
+  if (lang === 'ja') {
+    document.cookie = 'lang=ja'
+    $('#ocrLang').html("日语 <span class='caret'></span>")
+  } else if (lang === 'ko') {
+    document.cookie = 'lang=ko'
+    $('#ocrLang').html("韩语 <span class='caret'></span>")
+  } else if (lang === 'en') {
+    document.cookie = 'lang=en'
+    $('#ocrLang').html("英语 <span class='caret'></span>")
+  } else {
+    document.cookie = 'lang=unk'
+    $('#ocrLang').html("检测语言 <span class='caret'></span>")
+  }
+}
+
 $(document).ready(function () {
   // process web fonts
   const NotoSansSC = new FontFaceObserver('Noto Sans SC')
@@ -1330,29 +1346,14 @@ $(document).ready(function () {
     'border-bottom': '1px solid #E34F00'
   })
 
-  function getCookie (name) {
-    var value = '; ' + document.cookie
-    var parts = value.split('; ' + name + '=')
-    if (parts.length === 2) return parts.pop().split(';').shift()
-  }
+  
+  // helps for lang
+  $("#lang_en").click(() => setlang("en"))
+  $("#lang_ja").click(() => setlang("ja"))
+  $("#lang_ko").click(() => setlang("ko"))
+  $("#lang_detect").click(() => setlang("unk"))
 
-  function setlang (lang) {
-    if (lang === 'ja') {
-      document.cookie = 'lang=ja'
-      $('#ocrLang').html("日语 <span class='caret'></span>")
-    } else if (lang === 'ko') {
-      document.cookie = 'lang=ko'
-      $('#ocrLang').html("韩语 <span class='caret'></span>")
-    } else if (lang === 'en') {
-      document.cookie = 'lang=en'
-      $('#ocrLang').html("英语 <span class='caret'></span>")
-    } else {
-      document.cookie = 'lang=unk'
-      $('#ocrLang').html("检测语言 <span class='caret'></span>")
-    }
-  }
-
-  $('#openGomiBox ').css('margin-top', '50px')
+  // $('#openGomiBox ').css('margin-top', '50px')
 
   if (getCookie('lang')) {
     setlang(getCookie('lang'))
