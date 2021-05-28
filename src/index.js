@@ -18,8 +18,20 @@ var SCALE_FACTOR = 1.2
 var canvasScale = 1
 
 var fileDetails = {}
-var originalImage
-var canvasBackground
+var originalImage = new Image()
+var originalImageRows, originalImageCols
+var serverFactor = 1
+async function loadOriginalImage (url) {
+  const imageLoadPromise = new Promise(resolve => {
+    originalImage.onload = () => {
+      // access image size here
+      originalImageRows = originalImage.height
+      originalImageCols = originalImage.width
+      resolve()
+    }
+    originalImage.src = url
+  })
+}
 
 function getCookie (name) {
   var value = '; ' + document.cookie
@@ -367,7 +379,7 @@ function generateGridSystem (canvas, text, initialGroup, fontSize, fontFamily, f
       texts.push(newText)
     }
 
-    /*for (let j = 0; j < 7; j++) {
+    /* for (let j = 0; j < 7; j++) {
       let newText = new fabric.Text('\u3000', {
         left: 0,
         top: fontSize,
@@ -382,7 +394,7 @@ function generateGridSystem (canvas, text, initialGroup, fontSize, fontFamily, f
         lockScalingY: true
       })
       texts.push(newText)
-    }*/
+    } */
 
     let toBeDeletedTexts = []
     initialGroup.forEachObject((obj) => {
@@ -401,7 +413,7 @@ function generateGridSystem (canvas, text, initialGroup, fontSize, fontFamily, f
 
     initialGroup.addWithUpdate()
   } else {
-    let textHint = new fabric.Textbox("\u3000", {
+    let textHint = new fabric.Textbox('\u3000', {
       fontFamily: fontFamily,
       fontSize: 12,
       fontWeight: fontWeight,
@@ -446,7 +458,7 @@ function generateGridSystem (canvas, text, initialGroup, fontSize, fontFamily, f
     initialGroup.add(textbox)
     initialGroup.addWithUpdate()
 
-    //console.log(initialGroup.toJSON())
+    // console.log(initialGroup.toJSON())
   }
   initialGroup.set({
     left: left,
@@ -464,14 +476,14 @@ function generateGridSystem (canvas, text, initialGroup, fontSize, fontFamily, f
   })
   initialGroup.setCoords()
   canvas.setActiveObject(initialGroup)
-  //initialGroup.addWithUpdate()
+  // initialGroup.addWithUpdate()
 }
 
 function enableCanvasObjectInteraction (canvas, textareaId, rectId) {
   const target = getObjectFromId(canvas, textareaId, rectId)
-  /*console.log('Check:', rectId, target.hasOwnProperty('selectBinded'),
+  /* console.log('Check:', rectId, target.hasOwnProperty('selectBinded'),
     target.hasOwnProperty('rescaleBinded'),
-    target.hasOwnProperty('dblClickBinded'))*/
+    target.hasOwnProperty('dblClickBinded')) */
 
   if (rectId === -1) {
     // we are working on a a mask
@@ -514,10 +526,10 @@ function enableCanvasObjectInteraction (canvas, textareaId, rectId) {
           const data = target.data
           const computedScale = target.computedScale
 
-          const top = data.textRect[j].y * computedScale
-          const left = data.textRect[j].x * computedScale
-          const width = data.textRect[j].width * computedScale
-          const height = data.textRect[j].height * computedScale
+          const top = data.textRect[j].y * computedScale / serverFactor
+          const left = data.textRect[j].x * computedScale / serverFactor
+          const width = data.textRect[j].width * computedScale / serverFactor
+          const height = data.textRect[j].height * computedScale / serverFactor
           const divTemplate = `<div class='tb-rl writingArea balloon${i} rect${j}' contenteditable='plaintext-only'></div>`
           $('div.canvas-container').append(divTemplate)
 
@@ -655,7 +667,7 @@ function enableCanvasObjectInteraction (canvas, textareaId, rectId) {
             editMode = false
             renderContent(canvas, i, j, target.additionalRect)
             target.set({ hoverCursor: 'pointer' })
-            //canvas.trigger('object:selected', { target: target })
+            // canvas.trigger('object:selected', { target: target })
             canvas.renderAll()
             $(document).off('click')
           }
@@ -745,7 +757,7 @@ function renderContent (canvas, textareaId, rectId, additional) {
   // looks like they are dummy. But we have to.
   activeBalloon = textareaId
   activeRect = rectId
-  //canvas.setActiveObject(group)
+  // canvas.setActiveObject(group)
   canvas.renderAll()
 }
 
@@ -765,24 +777,26 @@ function zoomTo (canvas, scale) {
     var left = objects[i].left
     var top = objects[i].top
 
-    var tempScaleX = scaleX * (1 / SCALE_FACTOR)
-    var tempScaleY = scaleY * (1 / SCALE_FACTOR)
-    var tempLeft = left * (1 / SCALE_FACTOR)
-    var tempTop = top * (1 / SCALE_FACTOR)
+    objects[i].scaleX = scaleX * (1 / SCALE_FACTOR)
+    objects[i].scaleY = scaleY * (1 / SCALE_FACTOR)
+    objects[i].left = left * (1 / SCALE_FACTOR)
+    objects[i].top = top * (1 / SCALE_FACTOR)
 
-    objects[i].scaleX = tempScaleX
-    objects[i].scaleY = tempScaleY
-    objects[i].left = tempLeft
-    objects[i].top = tempTop
+    if (objects[i].balloonId && objects[i].rectId) {
+      objects[i].scaleX /= serverFactor
+      objects[i].scaleY /= serverFactor
+      objects[i].left /= serverFactor
+      objects[i].top /= serverFactor
+    }
 
     objects[i].setCoords()
 
     if (objects[i].balloonId && objects[i].rectId) {
       const textarea = $(`.balloon${objects[i].balloonId}.rect${objects[i].rectId}`)
-      const width = parseFloat(textarea.css('width'))
-      const height = parseFloat(textarea.css('height'))
-      const left = parseFloat(textarea.css('left'))
-      const top = parseFloat(textarea.css('top'))
+      const width = parseFloat(textarea.css('width')) / serverFactor
+      const height = parseFloat(textarea.css('height')) / serverFactor
+      const left = parseFloat(textarea.css('left')) / serverFactor
+      const top = parseFloat(textarea.css('top')) / serverFactor
       $(`.balloon${objects[i].balloonId}.rect${objects[i].rectId}`).css({
         'top': width + 'px',
         'left': height + 'px',
@@ -800,9 +814,6 @@ function addBalloonMasks (canvas, data, computedScale) {
   let loadCount = 0
   for (let i = 0; i < data.balloonCount; i++) {
     fabric.Image.fromURL(data[i].filledMaskURL, oImg => {
-      // scale image down, and flip it, before adding it onto canvas
-      // oImg.scale(0.5).setFlipX(true);
-
       loadCount += 1
       oImg.set({
         opacity: 0.0,
@@ -828,7 +839,7 @@ function addBalloonMasks (canvas, data, computedScale) {
 
       if (loadCount === data.balloonCount) {
         // when all are loaded
-        $('div.actions ul').click(function () {
+        $('div.actions ul').on('click', () => {
           $(this).parent().css('opacity', '0')
         })
         setTimeout(() => {
@@ -891,7 +902,7 @@ function initializeBalloonChecker (canvas, width, height, originalImage, data) {
   $('#balloonChecker').hide()
   // trigger save button
 
-  $('.darkroom-icon-save').parent().click(function (ev) {
+  $('.darkroom-icon-save').parent().on('click', function (ev) {
     ev.preventDefault()
     // open result in new windows.
     var originalScale = canvasScale
@@ -921,7 +932,7 @@ function initializeBalloonChecker (canvas, width, height, originalImage, data) {
   })
 
   // trigger add routine
-  $('.darkroom-icon-add').parent().click(function (ev) {
+  $('.darkroom-icon-add').parent().on('click', ev => {
     ev.preventDefault()
 
     // add a mouse down trigger.
@@ -1046,7 +1057,7 @@ function initializeBalloonChecker (canvas, width, height, originalImage, data) {
             if (!$tgt.is('li,select,option,button,i') && !$tgt.is(`.balloon${i}.rect${j}`) && !$tgt.is('.writingArea div')) {
               editMode = false
               renderContent(canvas, i, j, true)
-              //canvas.trigger('object:selected', { target: target })
+              // canvas.trigger('object:selected', { target: target })
               $(document).off('click')
             }
           })
@@ -1057,10 +1068,10 @@ function initializeBalloonChecker (canvas, width, height, originalImage, data) {
 
   // append quick editor
 
-  $('.darkroom-toolbar button').click(function (ev) {
+  $('.darkroom-toolbar button').on('click', ev => {
     ev.preventDefault()
   })
-  $('#canvasQuickEditor-Font select').change(function (ev) {
+  $('#canvasQuickEditor-Font select').on('change', () => {
     var i = activeBalloon
     var j = activeRect
     var fonts = $('#canvasQuickEditor-Font select option:selected').val().split(',')
@@ -1076,7 +1087,7 @@ function initializeBalloonChecker (canvas, width, height, originalImage, data) {
 
     async function loadFon (observers) { await Promise.all(observers.map(font => font.load(null, 15000))) }
     $.when(async () => { await loadFon(observers) }).then(() => {
-      console.log('then')
+      // console.log('then')
       globalFont = $('#canvasQuickEditor-Font select option:selected').val()
       const target = getObjectFromId(canvas, i, j)
 
@@ -1090,7 +1101,7 @@ function initializeBalloonChecker (canvas, width, height, originalImage, data) {
 
   var timeoutId = 0
 
-  $('#canvasQuickEditor-Enlarge').mousedown(function (ev) {
+  $('#canvasQuickEditor-Enlarge').on('mousedown', ev => {
     ev.preventDefault()
     // clear font size cache
     fontSizeCache = []
@@ -1122,11 +1133,11 @@ function initializeBalloonChecker (canvas, width, height, originalImage, data) {
         renderContent(canvas, i, j, target.additionalRect)
       }
     }, 150)
-  }).bind('mouseup mouseleave', function () {
+  }).on('mouseup mouseleave', function () {
     clearInterval(timeoutId)
   })
 
-  $('#canvasQuickEditor-Shrink').mousedown(function (ev) {
+  $('#canvasQuickEditor-Shrink').on('mousedown', ev => {
     ev.preventDefault()
     // clear font size cache
     fontSizeCache = []
@@ -1157,11 +1168,11 @@ function initializeBalloonChecker (canvas, width, height, originalImage, data) {
         renderContent(canvas, i, j, target.additionalRect)
       }
     }, 150)
-  }).bind('mouseup mouseleave', function () {
+  }).on('mouseup mouseleave', function () {
     clearInterval(timeoutId)
   })
 
-  $('#canvasQuickEditor-Bold').mousedown(function () {
+  $('#canvasQuickEditor-Bold').on('mousedown', () => {
     var i = activeBalloon
     var j = activeRect
     const target = getObjectFromId(canvas, i, j)
@@ -1177,7 +1188,7 @@ function initializeBalloonChecker (canvas, width, height, originalImage, data) {
     }
   })
 
-  $('#canvasQuickEditor-Rotate').mousedown(function (ev) {
+  $('#canvasQuickEditor-Rotate').on('mousedown', ev => {
     if (!$(this).hasClass('disabled')) {
       ev.preventDefault()
       var i = activeBalloon
@@ -1205,7 +1216,7 @@ function initializeBalloonChecker (canvas, width, height, originalImage, data) {
     }
   })
 
-  $('#canvasQuickEditor-Delete').mousedown(function (ev) {
+  $('#canvasQuickEditor-Delete').on('mousedown', ev => {
     if (!$(this).hasClass('disabled')) {
       ev.preventDefault()
       const i = activeBalloon
@@ -1245,7 +1256,7 @@ function initializeBalloonChecker (canvas, width, height, originalImage, data) {
       // console.log(balloonLUTSize[i], additional, i, j)
       if (balloonLUTSize[i] === 0 && !additional) {
         const oImg = getObjectFromId(canvas, i, -1)
-        console.log(oImg, i, j)
+        // console.log(oImg, i, j)
         oImg.set({
           opacity: 0.0,
           selectable: true,
@@ -1280,12 +1291,13 @@ function initializeBalloonChecker (canvas, width, height, originalImage, data) {
     canvas.sendToBack(oImg)
 
     // width -> screenwidth
-    let computedScale = (Math.trunc(parseInt($('#previewWrapper').css('width'))) - 1) / (data.dim.cols)
-    // console.log(computedScale)
+    //console.log(width, height)
+    serverFactor = data.dim.cols / width
+    console.log("Server factor:", serverFactor)
+    let computedScale = (Math.trunc(parseInt($('#previewWrapper').css('width'))) - 1) / (width)
+    //console.log(computedScale)
     addBalloonMasks(canvas, data, computedScale)
     zoomTo(canvas, 1 / computedScale)
-
-    canvasBackground = oImg
 
     $('#balloonChecker').fadeIn()
     $('#previewWrapper').css('border', 'none')
@@ -1293,8 +1305,8 @@ function initializeBalloonChecker (canvas, width, height, originalImage, data) {
   }, {
     'left': 0,
     'top': 0,
-    'width': data.dim.cols,
-    'height': data.dim.rows,
+    'width': width,
+    'height': height,
     opacity: 1,
     selectable: false,
     hasControls: false
@@ -1319,7 +1331,8 @@ function setlang (lang) {
   }
 }
 
-$(document).ready(function () {
+// document.ready
+$(() => {
   // process web fonts
   const NotoSansSC = new FontFaceObserver('Noto Sans SC')
   const NotoSerifSC = new FontFaceObserver('Noto Serif SC')
@@ -1327,9 +1340,9 @@ $(document).ready(function () {
     console.log('Init font loaded')
   })
 
-  $(window).resize(function () {
+  $(window).on('resize', () => {
     if ($('.canvas-container').length) {
-      let computedScale = (Math.trunc(parseInt($('#previewWrapper').css('width'))) - 1) / (canvasBackground.width)
+      let computedScale = (Math.trunc(parseInt($('#previewWrapper').css('width'))) - 1) / (originalImage.width)
       zoomTo(globalCanvas, 1 / computedScale)
       // ps.update()
     }
@@ -1346,12 +1359,11 @@ $(document).ready(function () {
     'border-bottom': '1px solid #E34F00'
   })
 
-  
   // helps for lang
-  $("#lang_en").click(() => setlang("en"))
-  $("#lang_ja").click(() => setlang("ja"))
-  $("#lang_ko").click(() => setlang("ko"))
-  $("#lang_detect").click(() => setlang("unk"))
+  $('#lang_en').on('click', () => setlang('en'))
+  $('#lang_ja').on('click', () => setlang('ja'))
+  $('#lang_ko').on('click', () => setlang('ko'))
+  $('#lang_detect').on('click', () => setlang('unk'))
 
   // $('#openGomiBox ').css('margin-top', '50px')
 
@@ -1391,44 +1403,38 @@ $(document).ready(function () {
     preloadArr[i].src = imgArr[i]
   }
 
-  $('#fileupload').bind('fileuploadadd', function () {
+  $('#fileupload').on('fileuploadadd', function (e, file) {
     function changeImg () {
       $('#dropbox').css('background-image', 'url(' + preloadArr[currImg++ % preloadArr.length].src + ')')
+    }
+    var rawfile = file.files[0]
+    var reader = new FileReader(rawfile)
+    reader.readAsDataURL(rawfile)
+    fileDetails.type = rawfile.type
+    reader.onload = async function (e) {
+      var imageDataURL = e.target.result
+      await loadOriginalImage(imageDataURL)
     }
     var currImg = 1
     changeImg()
   })
 
-  $('#fileupload').bind('fileuploaddone', function (e, file) {
-    // $("div.actions").fadeIn();
-
+  $('#fileupload').on('fileuploaddone', function (e, file) {
     // initialize and render canvas -> async
-    var rawfile = file.files[0]
-    var reader = new FileReader(rawfile)
-    reader.readAsDataURL(rawfile)
-    reader.onload = function (e) {
-      fileDetails = $.parseJSON(file.result)
-      var data = e.target.result
-      originalImage = data
-      fileDetails.type = rawfile.type
-      var canvas = new fabric.Canvas('balloonChecker', {
-        renderOnAddRemove: false,
-        preserveObjectStacking: true
-      })
+    fileDetails = JSON.parse(file.result)
 
-      // now adding scrollbars
-      // ps = new PerfectScrollbar('.canvas-container', {
-      //  suppressScrollX: true
-      // })
+    var canvas = new fabric.Canvas('balloonChecker', {
+      renderOnAddRemove: false,
+      preserveObjectStacking: true
+    })
 
-      canvas.selection = false
-      let ctx = canvas.getContext('2d')
-      ctx.imageSmoothingEnabled = false
-      canvas.lowerCanvasEl.getContext('2d').imageSmoothingEnabled = false
-      canvas.upperCanvasEl.getContext('2d').imageSmoothingEnabled = false
-      globalCanvas = canvas
-      initializeBalloonChecker(canvas, fileDetails.dim.cols, fileDetails.dim.rows, originalImage, fileDetails)
-    }
+    canvas.selection = false
+    let ctx = canvas.getContext('2d')
+    ctx.imageSmoothingEnabled = false
+    canvas.lowerCanvasEl.getContext('2d').imageSmoothingEnabled = false
+    canvas.upperCanvasEl.getContext('2d').imageSmoothingEnabled = false
+    globalCanvas = canvas
+    initializeBalloonChecker(canvas, originalImageCols, originalImageRows, originalImage.src, fileDetails)
 
     $('#dropbox').fadeOut()
     $('#dropAd').hide()
@@ -1436,23 +1442,23 @@ $(document).ready(function () {
       $('#progress .bar').fadeOut()
     }, 1000)
 
-    $(window).trigger('resize')
+    // $(window).trigger('resize')
   })
 
   $('div.actions').hide()
   $('#disqus_thread').hide()
 
-  $('#openGomiBox').click(function () {
+  $('#openGomiBox').on('click', () => {
     $('#disqus_thread').toggle()
   })
-  $('.btn-success:first').click(() => {
+  $('.btn-success:first').on('click', () => {
     $('.bdsharebuttonbox').toggle()
   })
 
   // page scroll
 
   // dropbox styles
-  $(document).bind('dragover', function (e) {
+  $(document).on('dragover', function (e) {
     var dropZone = $('#dropzone')
     var timeout = window.dropZoneTimeout
     if (!timeout) {
