@@ -550,7 +550,7 @@ function enableCanvasObjectInteraction (canvas, textareaId, rectId) {
             })
           }
 
-          $(`.balloon${i}.rect${j}`).focus()
+          $(`.balloon${i}.rect${j}`).trigger('focus')
           perTextAreaVerticalMode[i][j] = true
 
           $(document).on('click', function (evt) {
@@ -659,7 +659,7 @@ function enableCanvasObjectInteraction (canvas, textareaId, rectId) {
         })
 
         $(`.balloon${i}.rect${j}`).show()
-        $(`.balloon${i}.rect${j}`).focus()
+        $(`.balloon${i}.rect${j}`).trigger('focus')
         $(document).on('click', function (evt) {
           // console.log('clicked')
           var $tgt = $(evt.target)
@@ -1046,11 +1046,10 @@ function initializeBalloonChecker (canvas, width, height, originalImage, data) {
         balloonLUTSize[i] += 1
         perTextAreaVerticalMode[i][j] = true
         renderContent(canvas, i, j, true)
-        const target = getObjectFromId(canvas, i, j)
         canvas.renderAll()
         setTimeout(() => {
           $(`.balloon${i}.rect${j}`).show()
-          $(`.balloon${i}.rect${j}`).focus()
+          $(`.balloon${i}.rect${j}`).trigger('focus')
 
           $(document).on('click', function (evt) {
             var $tgt = $(evt.target)
@@ -1204,11 +1203,14 @@ function initializeBalloonChecker (canvas, width, height, originalImage, data) {
         $(`.balloon${i}.rect${j}`).addClass('lr-tb')
       }
 
-      const target = getObjectFromId(canvas, i, j)
+      let target = getObjectFromId(canvas, i, j)
       const additional = target.additionalRect
       canvas.remove(target)
       if (!editMode) {
         renderContent(canvas, i, j, additional)
+        $('#canvasQuickEditor-Delete').removeClass('disabled')
+        $('#canvasQuickEditor-Rotate').removeClass('disabled')
+        $('.canvasQuickEditor').css('display', 'inline-block')
       } else {
         // currently we do nothing.
         // keep cool.
@@ -1290,12 +1292,9 @@ function initializeBalloonChecker (canvas, width, height, originalImage, data) {
     canvas.add(oImg)
     canvas.sendToBack(oImg)
 
-    // width -> screenwidth
-    //console.log(width, height)
     serverFactor = data.dim.cols / width
-    console.log("Server factor:", serverFactor)
+    console.log('Server factor:', serverFactor)
     let computedScale = (Math.trunc(parseInt($('#previewWrapper').css('width'))) - 1) / (width)
-    //console.log(computedScale)
     addBalloonMasks(canvas, data, computedScale)
     zoomTo(canvas, 1 / computedScale)
 
