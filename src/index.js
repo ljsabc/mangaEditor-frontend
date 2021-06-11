@@ -767,8 +767,8 @@ function zoomTo (canvas, scale) {
   SCALE_FACTOR = scale / canvasScale
   canvasScale = scale
 
-  canvas.setHeight(canvas.get('height') * (1 / SCALE_FACTOR))
-  canvas.setWidth(canvas.get('width') * (1 / SCALE_FACTOR))
+  canvas.setHeight(canvas.get('height') / SCALE_FACTOR)
+  canvas.setWidth(canvas.get('width') / SCALE_FACTOR)
 
   var objects = canvas.getObjects()
   for (var i in objects) {
@@ -782,21 +782,21 @@ function zoomTo (canvas, scale) {
     objects[i].left = left * (1 / SCALE_FACTOR)
     objects[i].top = top * (1 / SCALE_FACTOR)
 
-    if (objects[i].balloonId && objects[i].rectId) {
-      objects[i].scaleX /= serverFactor
-      objects[i].scaleY /= serverFactor
-      objects[i].left /= serverFactor
-      objects[i].top /= serverFactor
-    }
+    /*if (objects[i].balloonId && objects[i].rectId) {
+    	objects[i].scaleX /= serverFactor
+    	objects[i].scaleY /= serverFactor
+    	objects[i].left /= serverFactor
+    	objects[i].top /= serverFactor
+    }*/
 
     objects[i].setCoords()
 
     if (objects[i].balloonId && objects[i].rectId) {
       const textarea = $(`.balloon${objects[i].balloonId}.rect${objects[i].rectId}`)
-      const width = parseFloat(textarea.css('width')) / serverFactor
-      const height = parseFloat(textarea.css('height')) / serverFactor
-      const left = parseFloat(textarea.css('left')) / serverFactor
-      const top = parseFloat(textarea.css('top')) / serverFactor
+      const width = parseFloat(textarea.css('width')) // / serverFactor
+      const height = parseFloat(textarea.css('height'))//  / serverFactor
+      const left = parseFloat(textarea.css('left')) // / serverFactor
+      const top = parseFloat(textarea.css('top')) // / serverFactor
       $(`.balloon${objects[i].balloonId}.rect${objects[i].rectId}`).css({
         'top': width + 'px',
         'left': height + 'px',
@@ -829,8 +829,10 @@ function addBalloonMasks (canvas, data, computedScale) {
         rectId: -1
       })
 
-      oImg.scaleToWidth(fileDetails[i].boundingRect.width * computedScale)
-      oImg.scaleToHeight(fileDetails[i].boundingRect.height * computedScale)
+      // oImg.scaleToWidth(fileDetails[i].boundingRect.width * computedScale / serverFactor)
+      // oImg.scaleToHeight(fileDetails[i].boundingRect.height * computedScale / serverFactor)
+      oImg.scaleX = oImg.scaleX * computedScale / serverFactor
+      oImg.scaleY = oImg.scaleY * computedScale / serverFactor
 
       balloonMasks.push(oImg)
       canvas.add(oImg)
@@ -857,8 +859,8 @@ function addBalloonMasks (canvas, data, computedScale) {
         }, 400)
       }
     }, {
-      'left': data[i].boundingRect.x * computedScale,
-      'top': data[i].boundingRect.y * computedScale,
+      'left': data[i].boundingRect.x * computedScale / serverFactor,
+      'top': data[i].boundingRect.y * computedScale / serverFactor,
       originX: 'left',
       OriginY: 'top',
       opacity: 0.00,
@@ -921,6 +923,7 @@ function initializeBalloonChecker (canvas, width, height, originalImage, data) {
     $('#saveImg')[0].click()
 
     zoomTo(canvas, originalScale)
+    canvas.renderAll()
   })
 
   canvas.on('selection:cleared', function () {
