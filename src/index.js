@@ -6,7 +6,7 @@ import 'bootstrap3'
 import FontFaceObserver from 'fontfaceobserver'
 import 'fabric'
 import Analytics from 'analytics'
-import googleAnalyticsPlugin from 'analytics-plugin-ga'
+import googleAnalytics from '@analytics/google-analytics'
 import MobileDetect from 'mobile-detect'
 
 const md = new MobileDetect(window.navigator.userAgent)
@@ -1584,8 +1584,8 @@ const analytics = Analytics({
   app: 'mangaEditor',
   version: 140,
   plugins: [
-    googleAnalyticsPlugin({
-      trackingId: 'UA-49145449-1'
+    googleAnalytics({
+      measurementIds: ['UA-49145449-1']
     })
   ]
 })
@@ -1691,12 +1691,13 @@ v 1.4
 Rewritten with fabricjs 2
 Rebuilt with webpack
 Integrate with multiple optimizations
+Multi-language rotation
+Minor UI Improvements
 
 Known bugs
 
 + sidebar style issues
 + balloons with rect > 1 cannot be clicked twice
-+ rotation not working actually
 
 TODO:
 

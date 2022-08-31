@@ -39,12 +39,13 @@
     "webpack-cli": "^3.3.2",
     "webpack-dev-server": "^3.7.1",
     "webpack-fix-style-only-entries": "^0.3.0",
-    "webpack-merge": "^4.2.1"
+    "webpack-merge": "^4.2.1",
+    "yarn-audit-fix": "^9.3.5"
   },
   "dependencies": {
+    "@analytics/google-analytics": "^1.0.3",
     "@babel/polyfill": "^7.4.4",
-    "analytics": "^0.1.8",
-    "analytics-plugin-ga": "^0.1.4",
+    "analytics": "^0.8.1",
     "blueimp-file-upload": "^9.31.0",
     "bootstrap3": "^3.3.5",
     "bowser": "^1.9.4",
