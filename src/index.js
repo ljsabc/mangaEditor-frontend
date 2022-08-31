@@ -1493,6 +1493,7 @@ $(() => {
 $('#testTranslation').on('click', function () {
   // console.log(activeBalloon, fileDetails.balloonCount)
   if (!$(this).hasClass('disabled') && activeBalloon < fileDetails.balloonCount) {
+    $('#testTranslation').addClass('disabled')
     $('#translationIndicator').show()
     let translateData = {
       'id': fileDetails.id,
@@ -1512,7 +1513,14 @@ $('#testTranslation').on('click', function () {
         $('#translations #originalText').val(data.text)
         $('#translations #translatedText').val(data.translatedText)
         $('#translationIndicator').fadeOut()
+      },
+      error: function (data) {
+	alert("Error happened")
+      },
+      complete: function (data) {
+        $('#testTranslation').removeClass('disabled')	
       }
+
     })
   }
 })
