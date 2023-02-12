@@ -3,7 +3,7 @@
 
 <head>
   <meta charset="UTF-8">
-  <title>MangaEditor 1.41 - 一个修改漫画的小工具</title>
+  <title>MangaEditor 1.42 - 一个修改漫画的小工具</title>
   <link rel="stylesheet" href="style.css" rel="preload">
 </head>
 
@@ -114,8 +114,17 @@
                   </div>
                 </div>
                 <br />
-                <span id="testTranslation" class="btn btn-default btn-xs disabled">翻译当前气泡 </span>
-                <span id="translateAll" class="btn btn-default btn-xs disabled">提取所有文字 </span>
+		<div class="btn-group">
+                  <button type="button" id="testTranslation" class="btn btn-default btn-xs disabled">翻译当前气泡 </button>
+                  <button type="button" class="btn btn-default btn-xs dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                    <span class="caret"></span>
+                    <span class="sr-only">Toggle Dropdown</span>
+                  </button>
+                  <ul class="dropdown-menu">
+                    <li><span id="testDeepL" class="btn btn-default disabled">试一下DeepL</span></li>
+                  </ul>
+                </div>
+		<button type="button" id="translateAll" class="btn btn-default btn-xs disabled">提取所有文字</button>
                 <div class="loader" id="translationIndicator" style="display:none">
                   <div class="spinner-loader"></div> <span class="text-success">&nbsp; 正在处理... </span>
                 </div>

@@ -497,7 +497,7 @@ function enableCanvasObjectInteraction (canvas, textareaId, rectId) {
         $('#originalText').val('')
         $('#translatedText').val('')
         $('img.listItemImage').attr('src', fileDetails[textareaId].originalURL)
-        $('#testTranslation').removeClass('disabled')
+        $('#testTranslation, #testDeepL').removeClass('disabled')
       })
       target.selectBinded = true
     }
@@ -519,7 +519,7 @@ function enableCanvasObjectInteraction (canvas, textareaId, rectId) {
           $('#canvasQuickEditor').show()
 
           $('img.listItemImage').attr('src', fileDetails[textareaId].originalURL)
-          $('#testTranslation').removeClass('disabled')
+          $('#testTranslation, #testDeepL').removeClass('disabled')
           $('#originalText').val('')
           $('#translatedText').val('')
 
@@ -596,7 +596,7 @@ function enableCanvasObjectInteraction (canvas, textareaId, rectId) {
         $('#canvasQuickEditor-Rotate').removeClass('disabled')
         $('.canvasQuickEditor').css('display', 'inline-block')
         $('#canvasQuickEditor').show()
-        $('#testTranslation').removeClass('disabled')
+        $('#testTranslation, #testDeepL').removeClass('disabled')
         $('#originalText').val('')
         $('#translatedText').val('')
         if (!target.additionalRect) {
@@ -637,11 +637,11 @@ function enableCanvasObjectInteraction (canvas, textareaId, rectId) {
 
         if (!target.additionalRect) {
           $('img.listItemImage').attr('src', fileDetails[i].originalURL)
-          $('#testTranslation').removeClass('disabled')
+          $('#testTranslation, #testDeepL').removeClass('disabled')
           $('#originalText').val('')
           $('#translatedText').val('')
         } else {
-          $('#testTranslation').addClass('disabled')
+          $('#testTranslation, #testDeepL').addClass('disabled')
         }
 
         let top = target.get('top')
@@ -1497,7 +1497,8 @@ $('#testTranslation').on('click', function () {
     $('#translationIndicator').show()
     let translateData = {
       'id': fileDetails.id,
-      'fname': fileDetails[activeBalloon].originalURL.split('/').pop()
+      'fname': fileDetails[activeBalloon].originalURL.split('/').pop(),
+      'type': 'default'
     }
     if (getCookie('lang')) {
       translateData.lang = getCookie('lang')
@@ -1518,7 +1519,43 @@ $('#testTranslation').on('click', function () {
 	alert("Error happened")
       },
       complete: function (data) {
-        $('#testTranslation').removeClass('disabled')	
+        $('#testTranslation').removeClass('disabled')
+      }
+
+    })
+  }
+})
+
+// Translation with DeepL
+$('#testDeepL').on('click', function () {
+  if (!$(this).hasClass('disabled') && activeBalloon < fileDetails.balloonCount) {
+    $('#testDeepL').addClass('disabled')
+    $('#translationIndicator').show()
+    let translateData = {
+      'id': fileDetails.id,
+      'fname': fileDetails[activeBalloon].originalURL.split('/').pop(),
+      'type': 'DeepL'
+    }
+    if (getCookie('lang')) {
+      translateData.lang = getCookie('lang')
+    } else {
+      translateData.lang = 'unk'
+    }
+    $.ajax({
+      url: '/mangaEditor/translate/',
+      dataType: 'json',
+      method: 'POST',
+      data: translateData,
+      success: function (data) {
+        $('#translations #originalText').val(data.text)
+        $('#translations #translatedText').val(data.translatedText)
+        $('#translationIndicator').fadeOut()
+      },
+      error: function (data) {
+	alert("Error happened")
+      },
+      complete: function (data) {
+        $('#testDeepL').removeClass('disabled')
       }
 
     })
