@@ -115,16 +115,17 @@
                 </div>
                 <br />
 		<div class="btn-group">
-                  <button type="button" id="testTranslation" class="btn btn-default btn-xs disabled">翻译当前气泡 </button>
-                  <button type="button" class="btn btn-default btn-xs dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                  <button type="button" id="testTranslation" class="btn btn-default btn-sm disabled">翻译当前气泡 </button>
+                  <button type="button" class="btn btn-default btn-sm dropdown-toggle translate-button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
                     <span class="caret"></span>
                     <span class="sr-only">Toggle Dropdown</span>
                   </button>
                   <ul class="dropdown-menu">
-                    <li><span id="testDeepL" class="btn btn-default disabled">试一下DeepL</span></li>
+                    <li><span id="testAzure" class="btn btn-link disabled translate-button">Bing翻译</span></li>
+                    <li><span id="testDeepL" class="btn btn-link disabled translate-button">DeepL（测试版）</span></li>
                   </ul>
                 </div>
-		<button type="button" id="translateAll" class="btn btn-default btn-xs disabled">提取所有文字</button>
+		<button type="button" id="translateAll" class="btn btn-default btn-sm disabled">提取所有文字</button>
                 <div class="loader" id="translationIndicator" style="display:none">
                   <div class="spinner-loader"></div> <span class="text-success">&nbsp; 正在处理... </span>
                 </div>
@@ -145,8 +146,10 @@
             <div class="balloonList" id="balloonEditorMainframeList">
               <p><a href="https://github.com/ljsabc/mangaEditor-frontend">点击这里获得支持/反馈问题 (Changelogs and feedbacks)</a></p>
                 <ol>
-                  <li>服务器速度有了飞跃，目前的超时是120秒。如果120秒后返回错误还请手动操作。</li>
-                  <li>请不要用程序自动翻译。另外OCR的请求实在是太贵了。如果你对某个广告有兴趣欢迎点击来支持本站。</li>
+                  <li>服务器超时是120秒，如果120秒后返回错误就说明本站无法处理了。</li>
+                  <li>请不要用程序自动翻译，OCR的请求实在是太贵了。如果你对某个广告有兴趣欢迎点击来支持本站。</li>
+		  <li>服务器现在默认使用百度翻译。点击按钮的结果是确定性的，请不要重复点击。</li>
+		  <li>新增加了一个DeepL翻译用于测试（翻译英语水平很高，日语不太行）。DeepL全站总用量每个月50W字符，用没了这个月就没有了。Bing翻译目前不限量。</li>
                 </ol>
             </div>
           </div>

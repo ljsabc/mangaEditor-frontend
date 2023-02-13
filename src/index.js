@@ -497,7 +497,7 @@ function enableCanvasObjectInteraction (canvas, textareaId, rectId) {
         $('#originalText').val('')
         $('#translatedText').val('')
         $('img.listItemImage').attr('src', fileDetails[textareaId].originalURL)
-        $('#testTranslation, #testDeepL').removeClass('disabled')
+        $('#testTranslation, #testAzure, #testDeepL').removeClass('disabled')
       })
       target.selectBinded = true
     }
@@ -519,7 +519,7 @@ function enableCanvasObjectInteraction (canvas, textareaId, rectId) {
           $('#canvasQuickEditor').show()
 
           $('img.listItemImage').attr('src', fileDetails[textareaId].originalURL)
-          $('#testTranslation, #testDeepL').removeClass('disabled')
+          $('#testTranslation, #testAzure, #testDeepL').removeClass('disabled')
           $('#originalText').val('')
           $('#translatedText').val('')
 
@@ -596,7 +596,7 @@ function enableCanvasObjectInteraction (canvas, textareaId, rectId) {
         $('#canvasQuickEditor-Rotate').removeClass('disabled')
         $('.canvasQuickEditor').css('display', 'inline-block')
         $('#canvasQuickEditor').show()
-        $('#testTranslation, #testDeepL').removeClass('disabled')
+        $('#testTranslation, #testAzure, #testDeepL').removeClass('disabled')
         $('#originalText').val('')
         $('#translatedText').val('')
         if (!target.additionalRect) {
@@ -637,11 +637,11 @@ function enableCanvasObjectInteraction (canvas, textareaId, rectId) {
 
         if (!target.additionalRect) {
           $('img.listItemImage').attr('src', fileDetails[i].originalURL)
-          $('#testTranslation, #testDeepL').removeClass('disabled')
+          $('#testTranslation, #testAzure, #testDeepL').removeClass('disabled')
           $('#originalText').val('')
           $('#translatedText').val('')
         } else {
-          $('#testTranslation, #testDeepL').addClass('disabled')
+          $('#testTranslation, #testAzure, #testDeepL').addClass('disabled')
         }
 
         let top = target.get('top')
@@ -1521,20 +1521,21 @@ $('#testTranslation').on('click', function () {
       complete: function (data) {
         $('#testTranslation').removeClass('disabled')
       }
-
     })
   }
 })
 
 // Translation with DeepL
-$('#testDeepL').on('click', function () {
-  if (!$(this).hasClass('disabled') && activeBalloon < fileDetails.balloonCount) {
-    $('#testDeepL').addClass('disabled')
+$('#testDeepL, #testAzure').on('click', function () {
+  if (!$('#testTranslation').hasClass('disabled') && activeBalloon < fileDetails.balloonCount) {
+    $('#testTranslation, #testAzure, #testDeepL').addClass('disabled')
     $('#translationIndicator').show()
+    
+    const id = $(this).attr('id');
     let translateData = {
       'id': fileDetails.id,
       'fname': fileDetails[activeBalloon].originalURL.split('/').pop(),
-      'type': 'DeepL'
+      'type': id.slice(4)
     }
     if (getCookie('lang')) {
       translateData.lang = getCookie('lang')
@@ -1555,9 +1556,8 @@ $('#testDeepL').on('click', function () {
 	alert("Error happened")
       },
       complete: function (data) {
-        $('#testDeepL').removeClass('disabled')
+        $('#testTranslation, #testAzure, #testDeepL').removeClass('disabled')
       }
-
     })
   }
 })
